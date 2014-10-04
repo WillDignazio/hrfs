@@ -3,6 +3,7 @@
 #
 .PHONY: all clean src
 
+JAVAC=hadoop com.sun.tools.javac.Main
 JAR=blockparty.jar
 
 JSRC=	edu/rit/cs/*.java \
@@ -10,7 +11,7 @@ JSRC=	edu/rit/cs/*.java \
 JCLASS=$(JSRC:.java=.class)
 
 %.class: %.java
-	javac $<
+	$(JAVAC) $<
 
 all: $(JCLASS)
 	jar cvf $(JAR) $(JSRC)
