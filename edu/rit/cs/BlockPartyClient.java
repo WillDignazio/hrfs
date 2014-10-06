@@ -4,6 +4,7 @@
  */
 package edu.rit.cs;
 
+import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.*;
@@ -16,8 +17,8 @@ import java.net.*;
 
 public class BlockPartyClient
 {
-	FileSystem fs;
 	Configuration conf;
+	FileSystem fs;
 
 	/**
 	 * Default constructor, using the hadoop API, grabs the default

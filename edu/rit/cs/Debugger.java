@@ -7,6 +7,7 @@
  */
 package edu.rit.cs;
 
+import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.*;
@@ -21,10 +22,13 @@ public class Debugger
 {
 	public static void main(String[] args)
 	{
+		BlockPartyClient client;
 		Configuration conf;
-		FileSystem fs;
+		DistributedFileSystem fs;
 		Path path;
 		String host;
+		Iterator<Map.Entry<String,String>> iter;
+
 
 		if(args.length != 1) {
 			System.err.println("Usage: hadoop jar blockparty.jar edu.rit.cs.Debugger <host>");
@@ -35,11 +39,19 @@ public class Debugger
 
 		try {
 			conf = new Configuration();
-			fs = FileSystem.get(conf);
+			fs = (DistributedFileSystem)FileSystem.get(conf);
+
+			iter = conf.iterator();
+			while(iter.hasNext())
+				System.out.println(iter.next());
+
+			System.out.println("FS Class: " + fs.getClass());
 			path = new Path("hdfs://" + host + ":9000/");
 			System.out.println("Configuration Keys: " + conf.size());
 			System.out.println("Root Path Exists: " + fs.exists(path));
-			fs.printStatistics();
+			path = new Path("hdfs://" + host + ":9000/README");
+			FileMetadata fm = new FileMetadata(fs, path);
+			System.out.println(fm.replicaCount());
 		}
 		catch(IOException e) {
 			System.err.println("Failed to initialize debugger");
