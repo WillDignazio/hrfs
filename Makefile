@@ -3,18 +3,23 @@
 #
 .PHONY: all clean src
 
-JAVAC=hadoop com.sun.tools.javac.Main
-JAR=blockparty.jar
+CLASSPATH=$(shell hadoop classpath)
+JAVAC=javac #hadoop com.sun.tools.javac.Main
+JARC=jar
 
-JSRC=	edu/rit/cs/*.java \
+JAR=	blockparty.jar
+JSRC=	edu/rit/cs/Debugger.java		\
+	edu/rit/cs/BlockPartyClient.java	\
+	edu/rit/cs/BlockPartyReader.java	\
+	edu/rit/cs/FileMetadata.java		\
 
 JCLASS=$(JSRC:.java=.class)
 
 %.class: %.java
-	$(JAVAC) $<
+	$(JAVAC) -classpath $(CLASSPATH):. $<
 
 all: $(JCLASS)
-	jar cvf $(JAR) $(JSRC)
+	$(JARC) -cvf $(JAR) $(JCLASS)
 
 clean:
 	rm -f $(JCLASS)
