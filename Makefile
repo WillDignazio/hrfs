@@ -8,10 +8,7 @@ JAVAC=javac #hadoop com.sun.tools.javac.Main
 JARC=jar
 
 JAR=	blockparty.jar
-JSRC=	edu/rit/cs/Debugger.java		\
-	edu/rit/cs/BlockPartyClient.java	\
-	edu/rit/cs/BlockPartyReader.java	\
-	edu/rit/cs/FileMetadata.java		\
+JSRC=	edu/rit/cs/Bpfs.java			\
 
 JCLASS=$(JSRC:.java=.class)
 
