@@ -9,6 +9,7 @@ JARC=jar
 
 JAR=	blockparty.jar
 JSRC=	edu/rit/cs/Bpfs.java			\
+	edu/rit/cs/BpfsConstants.java		\
 
 JCLASS=$(JSRC:.java=.class)
 

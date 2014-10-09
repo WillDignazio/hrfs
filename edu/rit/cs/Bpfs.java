@@ -29,10 +29,11 @@ import org.apache.hadoop.util.*;
 public class Bpfs extends AbstractFileSystem
 {
 
-	public Bpfs(URI uri, String str, boolean bool, int i)
+	public Bpfs(URI uri)
 		throws URISyntaxException
 	{
-		super(uri, str, bool, i);
+		super(uri, BpfsConstants.BPFS_URI_SCHEME, 
+		      true, BpfsConstants.BPFS_PORT);
 	}
 
 	@Override
