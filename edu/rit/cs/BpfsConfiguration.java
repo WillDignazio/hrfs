@@ -23,6 +23,15 @@ public class BpfsConfiguration extends Configuration
 		Configuration.addDefaultResource("bpfs-site.xml");
 	}
 
+	/* 
+	 * Stub that just wanders into the class, making sure that
+	 * the static methods get called.
+	 */
+	public static void init()
+	{
+
+	}
+
 	public BpfsConfiguration()
 	{
 		super();

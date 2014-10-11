@@ -27,8 +27,13 @@ import org.apache.hadoop.util.*;
 @InterfaceStability.Evolving
 public class Bpfs extends AbstractFileSystem
 {
+	/* Make sure to initialize conf only once */
+	static
+	{
+		BpfsConfiguration.init();
+	}
 
-	public Bpfs(URI uri)
+	public Bpfs(final URI uri, final Configuration conf)
 		throws URISyntaxException
 	{
 		super(uri, BpfsConstants.BPFS_URI_SCHEME, 

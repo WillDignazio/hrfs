@@ -7,10 +7,14 @@ CLASSPATH=$(shell hadoop classpath)
 JAVAC=javac #hadoop com.sun.tools.javac.Main
 JARC=jar
 
-JAR=	blockparty.jar
+JAR=	bpfs.jar
 JSRC=	edu/rit/cs/Bpfs.java			\
 	edu/rit/cs/BpfsConstants.java		\
 	edu/rit/cs/BpfsConfiguration.java	\
+	edu/rit/cs/BpfsMapper.java		\
+	edu/rit/cs/BpfsReducer.java		\
+	edu/rit/cs/examples/BpfsClient.java	\
+	edu/rit/cs/examples/BpfsMapTest.java	\
 
 JCLASS=$(JSRC:.java=.class)
 
