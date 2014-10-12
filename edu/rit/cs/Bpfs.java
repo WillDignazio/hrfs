@@ -25,7 +25,7 @@ import org.apache.hadoop.util.*;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class Bpfs extends AbstractFileSystem
+public class Bpfs extends FileSystem
 {
 	/* Make sure to initialize conf only once */
 	static
@@ -33,74 +33,69 @@ public class Bpfs extends AbstractFileSystem
 		BpfsConfiguration.init();
 	}
 
-	public Bpfs(final URI uri, final Configuration conf)
-		throws URISyntaxException
+	/**
+	 * Default configuration, stub.
+	 */
+	public Bpfs()
 	{
-		super(uri, BpfsConstants.BPFS_URI_SCHEME, 
-		      true, BpfsConstants.BPFS_PORT);
+	}
+
+	/**
+	 * Get configuration scheme, generally bpfs://
+	 */
+	@Override
+	public String getScheme()
+	{ 
+		return BpfsKeys.BPFS_DEFAULT_URI_SCHEME;
 	}
 
 	@Override
-	public void checkPath(Path path) { };
+	public void initialize(URI uri, Configuration conf)
+		throws IOException
+	{
+		super.initialize(uri, conf);
+		setConf(conf);
+	}
 
 	@Override
-	public void checkScheme(URI uri, String scheme) { };
+	public FileStatus getFileStatus(Path p) { return null; }
 
 	@Override
-	public void setVerifyChecksum(boolean verifyChecksum) { };
+	public boolean mkdirs(Path p, FsPermission permission) { return false; };
 
 	@Override
-	public FileStatus[] listStatus(Path path) { return null; };
+	public Path getWorkingDirectory() { return null; }
 
 	@Override
-	public FsStatus getFsStatus(Path path) { return null; };
+	public void setWorkingDirectory(Path p) { }
 
 	@Override
-	public FsStatus getFsStatus() { return null; };
+	public FileStatus[] listStatus(Path p) { return null; }
 
 	@Override
-	public BlockLocation[] getFileBlockLocations(Path path, long start, long len) { return null; }
+	public boolean delete(Path p, boolean recursive) { return false; }
 
 	@Override
-	public FileStatus getFileStatus(Path path) { return null; }
+	public boolean rename(Path src, Path dst) { return false; }
 
 	@Override
-	public FileChecksum getFileChecksum(Path path) { return null; }
+	public FSDataOutputStream append(Path p, int buffersize) { return null; }
 
 	@Override
-	public void setTimes(Path path, long mtime, long atime) { };
+	public FSDataOutputStream append(Path p, int buffersize, Progressable progress)
+		throws IOException { return null; }
 
 	@Override
-	public void setOwner(Path path, String username, String groupname) { };
+	public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite, 
+					 int bufferSize, short replication, 
+					 long blockSize, Progressable progress) 
+	{
+		return null;
+	}
 
 	@Override
-	public void setPermission(Path path, FsPermission perms) { };
+	public FSDataInputStream open(Path p, int buffersize) { return null; }
 
 	@Override
-	public void renameInternal(Path src, Path dst) { };
-
-	@Override
-	public boolean setReplication(Path path, short replication) { return false; };
-
-	@Override
-	public FSDataInputStream open(Path path, int buffersize) { return null; }
-
-	@Override
-	public boolean delete(Path path, boolean recursive) { return false; }
-
-	@Override
-	public void mkdir(Path path, FsPermission perms, boolean createParent) { }
-
-	@Override
-	public FSDataOutputStream createInternal(Path path, EnumSet<CreateFlag> flag,
-						 FsPermission absPerms, int buffersz,
-						 short replication, long blksz,
-						 Progressable progress, ChecksumOpt chksumopt,
-						 boolean createParent) { return null; }
-
-	@Override
-	public FsServerDefaults getServerDefaults() { return null; }
-
-	@Override
-	public int getUriDefaultPort() { return -1; }
+	public URI getUri() { return null; }
 }

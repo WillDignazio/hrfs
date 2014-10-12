@@ -36,4 +36,19 @@ public class BpfsConfiguration extends Configuration
 	{
 		super();
 	}
+
+	public BpfsConfiguration(boolean loadDefaults)
+	{
+		super(loadDefaults);
+	}
+
+	public BpfsConfiguration(Configuration conf)
+	{
+		super(conf);
+	}
+
+	public static void main(String[] args) {
+		init();
+		Configuration.dumpDeprecatedKeys();
+	}
 }

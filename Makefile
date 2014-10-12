@@ -9,10 +9,12 @@ JARC=jar
 
 JAR=	bpfs.jar
 JSRC=	edu/rit/cs/Bpfs.java			\
-	edu/rit/cs/BpfsConstants.java		\
 	edu/rit/cs/BpfsConfiguration.java	\
+	edu/rit/cs/BpfsKeys.java		\
+	edu/rit/cs/BpfsNode.java		\
 	edu/rit/cs/BpfsMapper.java		\
 	edu/rit/cs/BpfsReducer.java		\
+	edu/rit/cs/BpfsRPC.java			\
 	edu/rit/cs/examples/BpfsClient.java	\
 	edu/rit/cs/examples/BpfsMapTest.java	\
 

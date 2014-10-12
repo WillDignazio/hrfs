@@ -20,13 +20,7 @@ public class BpfsClient
 		Bpfs fs;
 		Configuration conf;
 
-		try {
-			conf = new Configuration();
-			fs = new Bpfs(new URI("bpfs://batou.local"), conf);
-		}
-		catch(URISyntaxException e) {
-			System.err.println("Invalid URI.");
-			System.exit(1);
-		}
+		conf = new Configuration();
+		fs = new Bpfs();
 	}
 }

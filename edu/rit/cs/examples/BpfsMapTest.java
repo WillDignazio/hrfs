@@ -34,7 +34,9 @@ public class BpfsMapTest
 		}
 
 		conf = new Configuration();
-		fs = new Bpfs(new URI("bpfs://batou.local"), conf);
+		fs = new Bpfs();
+		
+		/*
 		jconf = new JobConf(BpfsMapTest.class);
 		jconf.setJobName("blockmap");
 
@@ -47,5 +49,6 @@ public class BpfsMapTest
 		FileInputFormat.addInputPath(jconf, new Path("file:/"+args[0]));
 		FileOutputFormat.setOutputPath(jconf, new Path("bpfs://batou.local/" + args[0]+"-output"));
 		JobClient.runJob(jconf);
+		*/
 	}
 }
