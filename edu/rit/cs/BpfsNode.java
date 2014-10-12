@@ -5,6 +5,7 @@
 package edu.rit.cs;
 
 import java.io.*;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
@@ -12,31 +13,39 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
 
+import org.apache.hadoop.ipc.RPC;
+
 public class BpfsNode
 	extends Configured
 	implements BpfsRPC
 {
-
 	static
 	{
 		BpfsConfiguration.init();
 	}
 
-	BpfsConfiguration conf;
-
+	private LinkedBlockingQueue workq;
+	private BpfsConfiguration conf;
 	private int port;
 	private String addr;
+	private final RPC.Server server;
 
 	/**
-	 * Sets the configuration file and any runtime constants that
-	 * may need to be set.
+	 * Ping "Am I alive method" or BpfsRPC
 	 */
-	public BpfsNode()
+	@Override
+	public String ping()
 	{
-		conf = new BpfsConfiguration();
+		return "pong";
+	}
 
-		this.port = conf.getInt(BpfsKeys.BPFS_NODE_PORT, 60010);
-		this.addr = conf.get(BpfsKeys.BPFS_NODE_ADDRESS, "0.0.0.0");
+	/**
+	 * Returns the number of jobs in the work queue.
+	 */
+	@Override
+	public int wqlen()
+	{
+		return workq.size();
 	}
 
 	/**
@@ -47,6 +56,54 @@ public class BpfsNode
 	public Configuration getConf()
 	{
 		return this.conf;
+	}
+
+	/**
+	 * Get a block from the node, this method provides a key
+	 * with which the data node will find wihthin the local 
+	 * block repository.
+	 */
+	@Override
+	public byte[] getBlock(String key)
+	{
+		return new byte[0];
+	}
+
+	/**
+	 * Put a block into the node. This takes a block and simply
+	 * stores the block as a contiguous file, with the filename
+	 * the key given. In this implementation, it is expected that
+	 * the filename be a SHA1 hash.
+	 */
+	public String putBlock(byte[] block)
+	{
+		return "0";
+	}
+
+	/**
+	 * Sets the configuration file and any runtime constants that
+	 * may need to be set.
+	 */
+	public BpfsNode()
+		throws IOException
+	{
+		conf = new BpfsConfiguration();
+
+		/* Get Configuration Objects */
+		this.port = conf.getInt(BpfsKeys.BPFS_NODE_PORT, 60010);
+		this.addr = conf.get(BpfsKeys.BPFS_NODE_ADDRESS, "0.0.0.0");
+		this.workq = new LinkedBlockingQueue();
+
+		/* Reaches out to the parent node conf */
+		this.server = new RPC.Builder(conf).
+			setInstance(this).
+			setProtocol(BpfsRPC.class).
+			setBindAddress(this.addr).
+			setPort(this.port).
+			build();
+
+		/* Automatically start the node */
+		this.server.start();
 	}
 
 	/**
@@ -65,6 +122,7 @@ public class BpfsNode
 	 * configurations from the config file.
 	 */
 	public static void main(String[] args)
+		throws IOException
 	{
 		BpfsNode node;
 

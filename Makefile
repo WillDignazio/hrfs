@@ -16,9 +16,11 @@ JSRC=	edu/rit/cs/Bpfs.java			\
 	edu/rit/cs/BpfsReducer.java		\
 	edu/rit/cs/BpfsRPC.java			\
 	edu/rit/cs/examples/BpfsClient.java	\
+	edu/rit/cs/examples/BpfsNodeClient.java	\
 	edu/rit/cs/examples/BpfsMapTest.java	\
 
-JCLASS=$(JSRC:.java=.class)
+JCLASS=	$(JSRC:.java=.class) \
+	edu/rit/cs/*.class
 
 %.class: %.java
 	$(JAVAC) -classpath $(CLASSPATH):. $<
