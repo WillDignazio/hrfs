@@ -50,12 +50,4 @@ public interface BpfsRPC
 	 * and was successfully deleted, true is returned.
 	 */
 	boolean delBlock(String key);
-
-	/**
-	 * Flush the cached blocks waiting to be written out to
-	 * the local node's disk. Upon return, the node will have
-	 * either failed to flush with an error, or returned
-	 * successfully.
-	 */
-	boolean flush();
 }

@@ -27,10 +27,7 @@ public class BpfsConfiguration extends Configuration
 	 * Stub that just wanders into the class, making sure that
 	 * the static methods get called.
 	 */
-	public static void init()
-	{
-
-	}
+	public static void init() { }
 
 	public BpfsConfiguration()
 	{

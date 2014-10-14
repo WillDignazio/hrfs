@@ -13,12 +13,17 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RPC;
 
 public class BpfsNode
 	extends Configured
 	implements BpfsRPC
 {
+	File datadir;
+	Log log;
+
 	static
 	{
 		BpfsConfiguration.init();
@@ -80,13 +85,6 @@ public class BpfsNode
 		return false;
 	}
 
-	/** Flushes all blocks cached before write. */
-	@Override
-	public boolean flush()
-	{
-		return false;
-	}
-
 	/**
 	 * Sets the configuration file and any runtime constants that
 	 * may need to be set.
@@ -94,7 +92,16 @@ public class BpfsNode
 	public BpfsNode()
 		throws IOException
 	{
+
 		conf = new BpfsConfiguration();
+		log = LogFactory.getLog(BpfsNode.class);
+		datadir = new File(conf.get(BpfsKeys.BPFS_NODE_PATH));
+
+		/* Check that the data dir exists */
+		if(!datadir.exists() || !datadir.isDirectory()) {
+			log.error("Node data path is not a directory");
+			System.exit(1);
+		}
 
 		/* Get Configuration Objects */
 		this.port = conf.getInt(BpfsKeys.BPFS_NODE_PORT, 60010);
