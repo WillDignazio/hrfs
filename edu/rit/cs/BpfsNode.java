@@ -59,25 +59,32 @@ public class BpfsNode
 	}
 
 	/**
-	 * Get a block from the node, this method provides a key
-	 * with which the data node will find wihthin the local 
-	 * block repository.
-	 */
+	 * Get a block from the node */
 	@Override
 	public byte[] getBlock(String key)
 	{
 		return new byte[0];
 	}
 
-	/**
-	 * Put a block into the node. This takes a block and simply
-	 * stores the block as a contiguous file, with the filename
-	 * the key given. In this implementation, it is expected that
-	 * the filename be a SHA1 hash.
-	 */
+	/** Put a block into the node. */
+	@Override
 	public String putBlock(byte[] block)
 	{
 		return "0";
+	}
+
+	/** Removes the block from the node. */
+	@Override
+	public boolean delBlock(String key)
+	{
+		return false;
+	}
+
+	/** Flushes all blocks cached before write. */
+	@Override
+	public boolean flush()
+	{
+		return false;
 	}
 
 	/**

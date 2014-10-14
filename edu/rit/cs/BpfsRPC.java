@@ -43,4 +43,19 @@ public interface BpfsRPC
 	 * block in the first place.
 	 */
 	byte[] getBlock(String key);
+
+	/**
+	 * Remove block from a node, this causes the deletion
+	 * of a block if the key exists. If the block existed
+	 * and was successfully deleted, true is returned.
+	 */
+	boolean delBlock(String key);
+
+	/**
+	 * Flush the cached blocks waiting to be written out to
+	 * the local node's disk. Upon return, the node will have
+	 * either failed to flush with an error, or returned
+	 * successfully.
+	 */
+	boolean flush();
 }
