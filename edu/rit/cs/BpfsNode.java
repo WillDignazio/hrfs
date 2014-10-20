@@ -1,6 +1,6 @@
 /**
+ * Copyright © 2014
  * Block Party Filesystem Node Daemon
- *
  */
 package edu.rit.cs;
 

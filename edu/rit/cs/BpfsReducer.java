@@ -1,4 +1,5 @@
 /**
+ * Copyright © 2014
  * Block Party Filesystem Reducer
  *
  * Reducer: [(Blk#, Blk)...] => [(Blk#, Sha1)...]

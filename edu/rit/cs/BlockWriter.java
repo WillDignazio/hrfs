@@ -1,6 +1,6 @@
 /**
+ * Copyright © 2014
  * Block Party Filesystem Block Writer
- *
  */
 package edu.rit.cs;
 

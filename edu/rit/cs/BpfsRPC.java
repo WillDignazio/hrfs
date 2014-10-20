@@ -1,6 +1,6 @@
 /**
+ * Copyright © 2014
  * Block Party Filesystem RPC
- *
  */
 package edu.rit.cs;
 

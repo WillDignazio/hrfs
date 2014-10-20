@@ -1,4 +1,5 @@
 /**
+ * Copyright © 2014
  * Block Party Filesystem Configuration
  *
  * @author Will Dignazio <wdignazio@gmail.com>

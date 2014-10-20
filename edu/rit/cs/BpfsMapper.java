@@ -1,4 +1,5 @@
 /**
+ * Copyright © 2014
  * Block Party Filesystem Mapper
  *
  * Mapper: Path+File => [(Blk#, Blk)...]

@@ -1,6 +1,6 @@
 /**
+ * Copyright © 2014
  * Block Party Filesystem Keys File
- *
  */
 package edu.rit.cs;
 
