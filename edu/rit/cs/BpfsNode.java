@@ -75,7 +75,29 @@ public class BpfsNode
 	@Override
 	public String putBlock(byte[] block)
 	{
-		return "0";
+		String out;
+		BlockWriter writer;
+		
+		out = null;
+		try {
+			writer = new BlockWriter(conf.get(BpfsKeys.BPFS_NODE_PATH));
+			writer.write(new String(block).toCharArray());
+			writer.close();
+
+			if(writer.isPlaced())
+				out = writer.blockName();
+		}
+		catch(FileNotFoundException e) {
+			log.error("Something seems to have happened to the data directory: "
+				  + e.toString());
+			return null;
+		}
+		catch(IOException e) {
+			log.error("Failed to write block to node: " + e.toString());
+			return null;
+		}
+
+		return out;
 	}
 
 	/** Removes the block from the node. */

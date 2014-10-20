@@ -23,6 +23,8 @@ public class BlockWriter
 	private FileOutputStream fos;
 	private File file;
 	private String path;
+	private String sha1;
+	private boolean placed;
 
 	/**
 	 * Construct a block writer based on a base directory
@@ -47,6 +49,18 @@ public class BlockWriter
 			throw new FileNotFoundException("Base directory does not exist");
 	}
 
+	/** Has the block been set? */
+	public boolean isPlaced()
+	{
+		return this.placed;
+	}
+
+	/** What was the filename (sha1sum) */
+	public String blockName()
+	{
+		return this.sha1;
+	}
+
 	/** Compute SHA1 Sum of block */
 	private String getSHA1(byte[] buf)
 		throws NoSuchAlgorithmException
@@ -64,18 +78,17 @@ public class BlockWriter
 	}
 
 	@Override
-	public void write(char[] cbuf, int off, int len)
+	public synchronized void write(char[] cbuf, int off, int len)
 		throws AccessDeniedException, IOException
 	{
 		byte[] bytes;
-		String sha1;
 
 		try {
 			bytes = new String(cbuf).getBytes();
-			sha1 = getSHA1(bytes);
+			this.sha1 = getSHA1(bytes);
 			
 			/* XXX This won't hold up to time */
-			file = new File(this.path + "/" + sha1);
+			file = new File(this.path + "/" + this.sha1);
 
 			/* Our blocks are immutable */
 			if(this.file.exists())
@@ -89,6 +102,8 @@ public class BlockWriter
 			lock = fos.getChannel().lock();
 			try {
 				fos.write(bytes, off, len);
+				fos.flush();
+				this.placed = true;
 			}
 			finally {
 				lock.release();
