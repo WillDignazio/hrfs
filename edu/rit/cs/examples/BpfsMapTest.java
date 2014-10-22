@@ -20,12 +20,10 @@ import edu.rit.cs.BpfsReducer;
 
 public class BpfsMapTest
 {
-
 	public static void main(String[] args)
 		throws IOException, URISyntaxException
 	{
 		Bpfs fs;
-		Configuration conf;
 		JobConf jconf;
 
 		if(args.length != 1) {
@@ -33,22 +31,17 @@ public class BpfsMapTest
 			System.exit(1);
 		}
 
-		conf = new Configuration();
 		fs = new Bpfs();
-		
-		/*
 		jconf = new JobConf(BpfsMapTest.class);
 		jconf.setJobName("blockmap");
 
 		jconf.setOutputKeyClass(LongWritable.class);
-		jconf.setOutputValueClass(Text.class);
+		jconf.setOutputValueClass(BytesWritable.class);
 
 		jconf.setMapperClass(BpfsMapper.class);
-		jconf.setReducerClass(BpfsReducer.class);
 
 		FileInputFormat.addInputPath(jconf, new Path("file:/"+args[0]));
 		FileOutputFormat.setOutputPath(jconf, new Path("bpfs://batou.local/" + args[0]+"-output"));
 		JobClient.runJob(jconf);
-		*/
 	}
 }

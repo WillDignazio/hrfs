@@ -37,7 +37,7 @@ public class BlockWriter
 		super();
 		File fpath;
 
-		this.path = path;
+		this.path = basedir;
 		fpath = new File(path);
 
 		this.file = null;
