@@ -1,10 +1,10 @@
 /**
  * Copyright © 2014
- * Block Party Filesystem Node Client
+ * Hadoop Replicating Filesystem Node Client
  *
- * Example file that uses the bpfs procotol to connect to a
+ * Example file that uses the hrfs procotol to connect to a
  * configured node on the network. This bypasses other arrangements
- * and uses the BpfsRCP object to communicate directly with nodes.
+ * and uses the HrfsRCP object to communicate directly with nodes.
  */
 package edu.rit.cs.examples;
 
@@ -16,18 +16,18 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import org.apache.hadoop.ipc.RPC;
 
-public class BpfsNodeClient
+public class HrfsNodeClient
 {
 	String[] hosts;
-	BpfsConfiguration conf;
-	ArrayList<BpfsRPC> rpcs;
+	HrfsConfiguration conf;
+	ArrayList<HrfsRPC> rpcs;
 
-	public BpfsNodeClient()
+	public HrfsNodeClient()
 		throws IOException
 	{
-		conf = new BpfsConfiguration();
-		hosts = conf.getStrings(BpfsKeys.BPFS_CLIENT_NODES);
-		rpcs = new ArrayList<BpfsRPC>();
+		conf = new HrfsConfiguration();
+		hosts = conf.getStrings(HrfsKeys.HRFS_CLIENT_NODES);
+		rpcs = new ArrayList<HrfsRPC>();
 
 		if(hosts == null) { 
 			System.err.println("No hosts configured for the client.");
@@ -37,10 +37,10 @@ public class BpfsNodeClient
 		for(String hostaddr : hosts) {
 			/* Add a proxy connection to the client */
 			InetSocketAddress inetaddr = new InetSocketAddress(hostaddr,
-							   conf.getInt(BpfsKeys.BPFS_NODE_PORT, 60010));
+							   conf.getInt(HrfsKeys.HRFS_NODE_PORT, 60010));
 
-			rpcs.add(RPC.getProxy(BpfsRPC.class,
-					      RPC.getProtocolVersion(BpfsRPC.class),
+			rpcs.add(RPC.getProxy(HrfsRPC.class,
+					      RPC.getProtocolVersion(HrfsRPC.class),
 					      inetaddr,
 					      conf));
 		}
@@ -66,7 +66,7 @@ public class BpfsNodeClient
 
 		fis = new FileInputStream("/dev/urandom");
 		buff = new byte[512];
-		for(BpfsRPC rpc : rpcs) {
+		for(HrfsRPC rpc : rpcs) {
 			for(int b=0; b < nblocks; ++b) {
 				count = fis.read(buff);
 				out = rpc.putBlock(buff);
@@ -81,16 +81,16 @@ public class BpfsNodeClient
 	 */
 	public void pingNodes()
 	{
-		for(BpfsRPC rpc : rpcs)
+		for(HrfsRPC rpc : rpcs)
 			System.out.println(rpc.ping());
 	}
 
 	public static void main(String[] args)
 		throws IOException
 	{
-		BpfsNodeClient client;
+		HrfsNodeClient client;
 
-		client = new BpfsNodeClient();
+		client = new HrfsNodeClient();
 		client.printNodes();
 		client.pingNodes();
 		client.writeBlocks(10);

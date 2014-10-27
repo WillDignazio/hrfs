@@ -1,8 +1,8 @@
 /**
  * Copyright © 2014
- * Block Party File System
+ * Hadoop Replicating File System
  *
- * @file Bpfs.java
+ * @file Hrfs.java
  * @author Will Dignazio <wdignazio@gmail.com>
  */
 package edu.rit.cs;
@@ -26,28 +26,28 @@ import org.apache.hadoop.util.*;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class Bpfs extends FileSystem
+public class Hrfs extends FileSystem
 {
 	/* Make sure to initialize conf only once */
 	static
 	{
-		BpfsConfiguration.init();
+		HrfsConfiguration.init();
 	}
 
 	/**
 	 * Default configuration, stub.
 	 */
-	public Bpfs()
+	public Hrfs()
 	{
 	}
 
 	/**
-	 * Get configuration scheme, generally bpfs://
+	 * Get configuration scheme, generally hrfs://
 	 */
 	@Override
 	public String getScheme()
 	{ 
-		return BpfsKeys.BPFS_DEFAULT_URI_SCHEME;
+		return HrfsKeys.HRFS_DEFAULT_URI_SCHEME;
 	}
 
 	@Override
@@ -85,6 +85,11 @@ public class Bpfs extends FileSystem
 	@Override
 	public FSDataOutputStream append(Path p, int buffersize, Progressable progress)
 		throws IOException { return null; }
+
+	public FSDataOutputStream create(Path f)
+	{
+		return null;
+	}
 
 	@Override
 	public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite, 

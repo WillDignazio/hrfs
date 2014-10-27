@@ -1,6 +1,6 @@
 /**
  * Copyright © 2014
- * Block Party Filesystem RPC
+ * Hadoop Replicating Filesystem RPC
  */
 package edu.rit.cs;
 
@@ -10,8 +10,8 @@ import org.apache.hadoop.ipc.ProtocolInfo;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-@ProtocolInfo(protocolName = "bpfs", protocolVersion = 1)
-public interface BpfsRPC
+@ProtocolInfo(protocolName = "hrfs", protocolVersion = 1)
+public interface HrfsRPC
 {
 	/**
 	 * Simple ping->pong response that acknowledges the 

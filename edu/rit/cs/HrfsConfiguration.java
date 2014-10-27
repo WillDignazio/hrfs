@@ -1,9 +1,9 @@
 /**
  * Copyright © 2014
- * Block Party Filesystem Configuration
+ * Hadoop Replicating Filesystem Configuration
  *
  * @author Will Dignazio <wdignazio@gmail.com>
- * @file BpfsConfiguration.java
+ * @file HrfsConfiguration.java
  */
 package edu.rit.cs;
 
@@ -16,12 +16,12 @@ import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
 
 @InterfaceAudience.Private
-public class BpfsConfiguration extends Configuration
+public class HrfsConfiguration extends Configuration
 {
 	static
 	{
-		Configuration.addDefaultResource("bpfs-default.xml");
-		Configuration.addDefaultResource("bpfs-site.xml");
+		Configuration.addDefaultResource("hrfs-default.xml");
+		Configuration.addDefaultResource("hrfs-site.xml");
 	}
 
 	/* 
@@ -30,17 +30,17 @@ public class BpfsConfiguration extends Configuration
 	 */
 	public static void init() { }
 
-	public BpfsConfiguration()
+	public HrfsConfiguration()
 	{
 		super();
 	}
 
-	public BpfsConfiguration(boolean loadDefaults)
+	public HrfsConfiguration(boolean loadDefaults)
 	{
 		super(loadDefaults);
 	}
 
-	public BpfsConfiguration(Configuration conf)
+	public HrfsConfiguration(Configuration conf)
 	{
 		super(conf);
 	}

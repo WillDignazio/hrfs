@@ -1,6 +1,6 @@
 /**
  * Copyright © 2014
- * Block Party Filesystem Node Daemon
+ * Hadoop Replicating Filesystem Node Daemon
  */
 package edu.rit.cs;
 
@@ -17,26 +17,26 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RPC;
 
-public class BpfsNode
+public class HrfsNode
 	extends Configured
-	implements BpfsRPC
+	implements HrfsRPC
 {
 	File datadir;
 	Log log;
 
 	static
 	{
-		BpfsConfiguration.init();
+		HrfsConfiguration.init();
 	}
 
 	private LinkedBlockingQueue workq;
-	private BpfsConfiguration conf;
+	private HrfsConfiguration conf;
 	private int port;
 	private String addr;
 	private final RPC.Server server;
 
 	/**
-	 * Ping "Am I alive method" or BpfsRPC
+	 * Ping "Am I alive method" or HrfsRPC
 	 */
 	@Override
 	public String ping()
@@ -55,7 +55,7 @@ public class BpfsNode
 
 	/**
 	 * Implements the method for configured, returns the 
-	 * BpfsConfiguration that is installed within the node.
+	 * HrfsConfiguration that is installed within the node.
 	 */
 	@Override
 	public Configuration getConf()
@@ -76,11 +76,11 @@ public class BpfsNode
 	public String putBlock(byte[] block)
 	{
 		String out;
-		BlockWriter writer;
+		NodeWriter writer;
 		
 		out = null;
 		try {
-			writer = new BlockWriter(conf.get(BpfsKeys.BPFS_NODE_PATH));
+			writer = new NodeWriter(conf.get(HrfsKeys.HRFS_NODE_PATH));
 			writer.write(new String(block).toCharArray());
 			writer.close();
 
@@ -111,13 +111,13 @@ public class BpfsNode
 	 * Sets the configuration file and any runtime constants that
 	 * may need to be set.
 	 */
-	public BpfsNode()
+	public HrfsNode()
 		throws IOException
 	{
 
-		conf = new BpfsConfiguration();
-		log = LogFactory.getLog(BpfsNode.class);
-		datadir = new File(conf.get(BpfsKeys.BPFS_NODE_PATH));
+		conf = new HrfsConfiguration();
+		log = LogFactory.getLog(HrfsNode.class);
+		datadir = new File(conf.get(HrfsKeys.HRFS_NODE_PATH));
 
 		/* Check that the data dir exists */
 		if(!datadir.exists() || !datadir.isDirectory()) {
@@ -126,14 +126,14 @@ public class BpfsNode
 		}
 
 		/* Get Configuration Objects */
-		this.port = conf.getInt(BpfsKeys.BPFS_NODE_PORT, 60010);
-		this.addr = conf.get(BpfsKeys.BPFS_NODE_ADDRESS, "0.0.0.0");
+		this.port = conf.getInt(HrfsKeys.HRFS_NODE_PORT, 60010);
+		this.addr = conf.get(HrfsKeys.HRFS_NODE_ADDRESS, "0.0.0.0");
 		this.workq = new LinkedBlockingQueue();
 
 		/* Reaches out to the parent node conf */
 		this.server = new RPC.Builder(conf).
 			setInstance(this).
-			setProtocol(BpfsRPC.class).
+			setProtocol(HrfsRPC.class).
 			setBindAddress(this.addr).
 			setPort(this.port).
 			build();
@@ -149,19 +149,19 @@ public class BpfsNode
 	@Override
 	public void setConf(Configuration conf)
 	{
-		this.conf = (BpfsConfiguration)conf;
+		this.conf = (HrfsConfiguration)conf;
 	}
 
 	/**
-	 * Starts the BpfsNode daemon, this sets up the correct
+	 * Starts the HrfsNode daemon, this sets up the correct
 	 * environment variables, and imports the default
 	 * configurations from the config file.
 	 */
 	public static void main(String[] args)
 		throws IOException
 	{
-		BpfsNode node;
+		HrfsNode node;
 
-		node = new BpfsNode();
+		node = new HrfsNode();
 	}
 }

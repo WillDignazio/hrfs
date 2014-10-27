@@ -13,14 +13,14 @@ import org.apache.hadoop.util.*;
 
 import edu.rit.cs.*;
 
-public class BpfsClient
+public class HrfsClient
 {
 	public static void main(String[] args)
 	{
-		Bpfs fs;
+		Hrfs fs;
 		Configuration conf;
 
 		conf = new Configuration();
-		fs = new Bpfs();
+		fs = new Hrfs();
 	}
 }

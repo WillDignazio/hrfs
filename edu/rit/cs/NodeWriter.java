@@ -1,6 +1,6 @@
 /**
  * Copyright © 2014
- * Block Party Filesystem Block Writer
+ * Hadoop Replicating Filesystem Node Writer
  */
 package edu.rit.cs;
 
@@ -16,7 +16,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Formatter;
 
-public class BlockWriter
+public class NodeWriter
 	extends Writer
 {
 	private FileLock lock;
@@ -30,7 +30,7 @@ public class BlockWriter
 	 * Construct a block writer based on a base directory
 	 * for which it will be stored.
 	 */
-	public BlockWriter(String basedir)
+	public NodeWriter(String basedir)
 		throws FileNotFoundException
 	{
 
