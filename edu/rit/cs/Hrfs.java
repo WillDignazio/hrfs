@@ -8,9 +8,13 @@
 package edu.rit.cs;
 
 import java.io.*;
+import java.util.*;
+
 import java.net.URISyntaxException;
 import java.net.URI;
-import java.util.EnumSet;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -27,18 +31,27 @@ import org.apache.hadoop.util.*;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class Hrfs extends FileSystem
-{
+{	
 	/* Make sure to initialize conf only once */
 	static
 	{
 		HrfsConfiguration.init();
 	}
 
+	private static final Log LOG = LogFactory.getLog(Hrfs.class);
+
+	private HrfsConfiguration conf;
+	private String[] nodeHosts;
+	private List<HrfsRPC> rpcs;
+
 	/**
 	 * Default configuration, stub.
 	 */
 	public Hrfs()
 	{
+		conf = new HrfsConfiguration();
+		nodeHosts = conf.getStrings(HrfsKeys.HRFS_CLIENT_NODES);
+		rpcs = new ArrayList<HrfsRPC>();
 	}
 
 	/**
@@ -88,6 +101,11 @@ public class Hrfs extends FileSystem
 
 	public FSDataOutputStream create(Path f)
 	{
+		MetadataBlock mblk;
+
+		/* Create empty block */
+		mblk = new MetadataBlock(f.toString());
+
 		return null;
 	}
 

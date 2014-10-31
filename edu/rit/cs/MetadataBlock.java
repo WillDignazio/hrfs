@@ -32,11 +32,12 @@ public class MetadataBlock
 
 	/**
 	 * Initialize an empty metadata block, contains no data and will
-	 * have values initialized to 0.
+	 * have values initialized to 0. This does take the path of the file
+	 * for record as to the empty file or directory.
 	 */
-	public MetadataBlock()
+	public MetadataBlock(String path)
 	{
-		this.path = null;
+		this.path = path;
 		this.nblocks = 0;
 		this.size = 0;
 		this.type = METATYPE_NULL;

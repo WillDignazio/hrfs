@@ -18,7 +18,8 @@ public interface HrfsRPC
 	 * participating node is still active.
 	 *
 	 * The server is expected to respond with a string
-	 * that is non-null;
+	 * that is non-null.
+	 * @return Pong from node target
 	 */
 	String ping();
 
@@ -26,6 +27,7 @@ public interface HrfsRPC
 	 * Returns the work queue length of the node, this
 	 * is the active number of operations currently
 	 * in line to be scheduled.
+	 * @return wqlen Length of work queue
 	 */
 	int wqlen();
 
@@ -34,6 +36,7 @@ public interface HrfsRPC
 	 * is to abstractly let a node deal with the block
 	 * placement. In return, it should give a string key
 	 * that was used to store the block.
+	 * @param block Block data to store on node
 	 */
 	String putBlock(byte[] block);
 
@@ -41,6 +44,8 @@ public interface HrfsRPC
 	 * Gets a block from a participating node. The String
 	 * key given is ideally the same kind used to put the
 	 * block in the first place.
+	 * @param key Remote key for block to retrieve
+	 * @return Block data associated with key
 	 */
 	byte[] getBlock(String key);
 
@@ -48,6 +53,8 @@ public interface HrfsRPC
 	 * Remove block from a node, this causes the deletion
 	 * of a block if the key exists. If the block existed
 	 * and was successfully deleted, true is returned.
+	 * @param key Key of block to delete on node
+	 * @return Whether delete was successful
 	 */
 	boolean delBlock(String key);
 }

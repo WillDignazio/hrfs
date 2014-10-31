@@ -5,6 +5,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
@@ -16,11 +17,12 @@ import edu.rit.cs.*;
 public class HrfsClient
 {
 	public static void main(String[] args)
+		throws Exception
 	{
-		Hrfs fs;
-		Configuration conf;
+		FileSystem fs;
+		HrfsConfiguration conf;
 
-		conf = new Configuration();
-		fs = new Hrfs();
+		conf = new HrfsConfiguration();
+		fs = FileSystem.get(conf);
 	}
 }

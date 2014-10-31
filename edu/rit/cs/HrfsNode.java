@@ -63,8 +63,7 @@ public class HrfsNode
 		return this.conf;
 	}
 
-	/**
-	 * Get a block from the node */
+	/** Get a block from the node */
 	@Override
 	public byte[] getBlock(String key)
 	{
@@ -145,6 +144,7 @@ public class HrfsNode
 	/**
 	 * Implements the method for configured, sets the
 	 * configuration file for the node.
+	 * @param conf Configuration object
 	 */
 	@Override
 	public void setConf(Configuration conf)
