@@ -93,16 +93,12 @@ public class HrfsNode
 					build();
 			}
 			catch(BindException e) {
+				LOG.warn("Unable to bind server to port: " + (port + p));
 				continue;
 			}
 			catch(Exception e) {
 				LOG.fatal("Failed to initialize RPC server: " + e.getMessage());
 				System.exit(1);
-			}
-			finally {
-				/* If we found an unbound port, stop. */
-				this.port += p;
-				break;
 			}
 		}
 
