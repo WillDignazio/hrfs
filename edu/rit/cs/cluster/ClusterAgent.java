@@ -48,10 +48,12 @@ public class ClusterAgent
 	private MulticastSocket socket;
 	private InetAddress group;
 	private MulticastListener listener;
-	private ClusterClient client;
 	private String addr;
 	private int port;
 	private ExecutorService executor;
+
+	private ClusterClient client;
+	private ClusterState state;
 
 	/**
 	 * Build the node cluster agent, listen on the configured multicast
@@ -110,6 +112,8 @@ public class ClusterAgent
 		implements Runnable
 	{
 		ServerSocket stsock;
+		String host;
+		int port;
 
 		/** Default constructor */
 		public StateListener()
@@ -126,6 +130,57 @@ public class ClusterAgent
 		}
 
 		/**
+		 * Returns the host address of the listener socket.
+		 * @return host Host Address of socket
+		 */
+		public String getListenerHostAddress()
+		{
+			String out;
+
+			out = null;
+			if(this.stsock == null)
+				return null;
+
+			/**
+			 * In typical java form, there is not a good way to
+			 * get a publicly available address. Admiteddly  this
+			 * gets a little weird since the StateListener listens
+			 * on all available addresses.
+			 *
+			 * So for this instance, we're going to use the same
+			 * known address configured for the node.
+			 */
+			return conf.get(HrfsKeys.HRFS_NODE_ADDRESS,
+					"127.0.0.1");
+		}
+
+		/**
+		 * Reurns the host port of the listener socket.
+		 * @return port Return port of listener socket
+		 */
+		public int getListenerPort()
+		{
+			if(this.stsock == null)
+				return -1;
+
+			return this.stsock.getLocalPort();
+		}
+
+		/**
+		 * In the event that we fail to receive a state from other members of the
+		 * cluster, we are going to create a new singular state that represents
+		 * a single node cluster.
+		 */
+		private ClusterState newSingleState()
+		{
+			/*
+			 * XXX This is pretty bad design, 
+			 * needs a real state constructur
+			 */
+			return new ClusterState(1, 0);
+		}
+
+		/**
 		 * Run routine for the TCP state listener thread, when a new cluster state
 		 * is sent, it will come through this listener.
 		 */
@@ -138,10 +193,11 @@ public class ClusterAgent
 			long time;
 
 			/* Fancy way of saying wait for STATE_WAIT_TIME */
-			time = System.nanoTime() + TimeUnit.SECONDS.toNanos(STATE_WAIT_TIME);
+			time = System.nanoTime() + TimeUnit.SECONDS.toNanos(STATE_WAIT_TIME-1);
 			for (;time>System.nanoTime();) {
 				try {
 					/* Poll for socket connection */
+					LOG.info("Accepting state connection from remote host");
 					insock = stsock.accept();
 					istream = new ObjectInputStream(insock.getInputStream());
 
@@ -215,6 +271,7 @@ public class ClusterAgent
 				}
 				catch(IOException e) {
 					LOG.warn("Error receiving cluster data: " + e.getMessage());
+					break;
 				}
 
 				data = packet.getData();
@@ -236,8 +293,10 @@ public class ClusterAgent
 				switch(smsg[0])
 				{
 				case "announce":
-					LOG.info("Got announce from " + smsg[1]);
+					LOG.info("Got announce: " + new String(data));
+					sendState(smsg[1], Integer.parseInt(smsg[2].trim()));
 					break;
+
 				default:
 					LOG.warn("Unknown cluster command: " + smsg[0]);
 					continue;
@@ -250,20 +309,57 @@ public class ClusterAgent
 	}
 
 	/**
+	 * Send the state to a remote host given at the address and port.
+	 * This is typically after an announcement has been picked up from
+	 * the MulticastListener.
+	 */
+	public synchronized void sendState(String host, int port)
+	{
+		Socket osock;
+		ObjectOutputStream ostream;
+
+		if(this.state == null) {
+			LOG.warn("Cluster state null, constructing node.");
+			return; // Just quit here
+		}
+
+		LOG.info("Sending state to " + host + " on port " + port);
+		try {
+			osock = new Socket(host, port);
+			osock.setSoTimeout(1000 * 10); // 10 Seconds
+
+			ostream = new ObjectOutputStream(osock.getOutputStream());
+			ostream.writeObject(this.state);
+
+			LOG.info("Sent state to recipient: " + host);
+			ostream.flush();
+			osock.close();
+		}
+		catch(UnknownHostException e) {
+			LOG.warn("Unable to resolve state recipient: " + host);
+		}
+		catch(IOException e) {
+			LOG.warn("Failed to send state to recipient.");
+		}
+	}
+
+	/**
 	 * Announce to the cluster that the node wishes to join.
 	 */
 	public synchronized void announce()
 	{
+		StateListener slistener;
 		DatagramPacket packet;
 		int cport;
 		String caddr;
 		String out;
 		byte[] buf;
 
-		cport = client.getHostPort();
-		caddr = client.getHostAddress();
-
 		try {
+			slistener = new StateListener();
+			cport = slistener.getListenerPort();
+			caddr = slistener.getListenerHostAddress();
+			
 			/* XXX Endianness might be a problem */
 			out = "announce!" + caddr + "!" + cport;
 			packet = new DatagramPacket(out.getBytes(), out.length(), this.group, this.port);
