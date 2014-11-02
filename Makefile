@@ -8,7 +8,8 @@ JAVAC=javac #hadoop com.sun.tools.javac.Main
 JARC=jar
 
 JAR=	hrfs.jar
-JSRC=	edu/rit/cs/Hrfs.java			\
+JSRC=	edu/rit/cs/ClusterAgent.java		\
+	edu/rit/cs/Hrfs.java			\
 	edu/rit/cs/HrfsConfiguration.java	\
 	edu/rit/cs/HrfsKeys.java		\
 	edu/rit/cs/HrfsNode.java		\

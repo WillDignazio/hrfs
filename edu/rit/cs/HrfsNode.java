@@ -22,22 +22,20 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-
 import edu.rit.cs.HrfsRing;
+import edu.rit.cs.ClusterAgent;
 
 public class HrfsNode
 	extends Configured
-	implements HrfsRPC
+	implements HrfsRPC, ClusterClient
 {
-	public static int MAX_PORT_OFFSET = 100; // Maximum difference from conf port
-	public static int MAX_UDP_SIZE	= 65507; // Max UDP packet size in bytes
-
-	private static final Log LOG = LogFactory.getLog(HrfsNode.class);
-
 	static
 	{
 		HrfsConfiguration.init();
 	}
+
+	private static int MAX_PORT_OFFSET = 100; // Maximum difference from conf port
+	private static final Log LOG = LogFactory.getLog(HrfsNode.class);
 
 	private File datadir;
 	private LinkedBlockingQueue workq;
@@ -109,112 +107,34 @@ public class HrfsNode
 		}
 
 		/* Build cluster proxy */
-		this.cagent = new ClusterAgent();
+		this.cagent = new ClusterAgent(this);
 
 		/* Start Node Daemons */
 		this.server.start();
-		this.cagent.start();
 	}
 
 	/**
-	 * Representative of the node to the multicast cluster group, allows
-	 * for the group of nodes to make placements and ring adjustments
-	 * on behalf of the node.
-	 *
-	 * This also runs as a seperate server thread within the Node, and
-	 * acts on a typical multicast group network.
+	 * Lets a cluster agent know what TCP address we might expect
+	 * to receive connections on from other nodes or hrfs clients.
+	 * @return String address of TCP server
 	 */
-	private class ClusterAgent
-		extends Thread
+	@Override
+	public String getHostAddress()
 	{
-		private MulticastSocket socket;
-		private InetAddress group;
-
-		/**
-		 * Build the node cluster agen, listen on the configured multicast
-		 * group from Hadoop. This will be the network that the proxy listens
-		 * for cluster anouncements and configuration changes.
-		 */
-		public ClusterAgent()
-		{
-			try {
-				this.socket = new MulticastSocket(
-					conf.getInt(HrfsKeys.HRFS_NODE_GROUP_PORT, 1246));
-				this.group = InetAddress.getByName(
-					conf.get(HrfsKeys.HRFS_NODE_GROUP_ADDRESS, "224.0.1.150"));
-
-				LOG.info("Joining cluster on mulitcast group: " + group.toString());
-				socket.joinGroup(group);
-			}
-			catch(UnknownHostException e) {
-				LOG.fatal("Unknown group address: " +
-					  e.toString());
-			}
-			catch(IOException e) {
-				LOG.fatal("Failed to initialize cluster connection: " +
-					  e.toString());
-				System.exit(1);
-			}
-		}
-
-		/** Running Thread */
-		public void run()
-		{
-			byte[] buffer;
-			DatagramPacket packet;
-			int nbytes;
-			byte[] data;
-			String[] smsg;
-
-			nbytes = 0;
-			buffer = new byte[MAX_UDP_SIZE];
-			packet = null;
-			smsg = null;
-
-			for(;;) {
-				packet = new DatagramPacket(buffer, buffer.length);
-
-				try {
-					socket.receive(packet);
-				}
-				catch(IOException e) {
-					LOG.warn("Error receiving cluster data: " + e.getMessage());
-				}
-
-				data = packet.getData();
-				if(data == null) {
-					LOG.error("Group socket closed");
-					break;
-				}
-				
-				smsg = new String(data).split("!");
-				if(smsg == null) {
-					LOG.warn("Received invalid cluster packet");
-					continue;
-				}
-
-				/**
-				 * The protocol for multiast communication is simple, and
-				 * is used primarily for initial communication.
-				 */
-				switch(smsg[0])
-				{
-				case "announce":
-					if(smsg.length != 2)
-						break;
-					LOG.info("Got announce from " + smsg[0]);
-					break;
-				default:
-					LOG.warn("Unknown cluster command: " + smsg[0]);
-					continue;
-				}
-			}
-
-			/* Hit error or close call, try to cleanup */
-			socket.close();
-		}
+		return this.addr;
 	}
 
+	/**
+	 * Lets a cluster agent know what TCP port we might expect
+	 * to receive connections on from other nodes or hrfs clients.
+	 * @return int Port that we're listening on.
+	 */
+	@Override
+	public int getHostPort()
+	{
+		return this.port;
+	}
+	
 	/**
 	 * Ping "Am I alive method" or HrfsRPC
 	 */
