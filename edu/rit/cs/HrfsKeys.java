@@ -12,12 +12,12 @@ public final class HrfsKeys
 	extends CommonConfigurationKeys
 {
 	/* Node Configuration Keys */
-	public static final String HRFS_CLIENT_NODES	= "hrfs.data.nodes";
 	public static final String HRFS_NODE_ADDRESS	= "hrfs.node.address";
 	public static final String HRFS_NODE_PATH	= "hrfs.node.path";
 	public static final String HRFS_NODE_PORT	= "hrfs.node.port";
+	public static final String HRFS_NODE_GROUP_ADDRESS	= "hrfs.node.group.address";
+	public static final String HRFS_NODE_GROUP_PORT		= "hrfs.node.group.port";
 
-	/* Global State Configuration Keys */
 	public static final String HRFS_BLKSZ		= "hrfs.blksz";
 
 	/* Assinged Value Constants */

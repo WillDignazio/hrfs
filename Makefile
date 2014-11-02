@@ -13,6 +13,7 @@ JSRC=	edu/rit/cs/Hrfs.java			\
 	edu/rit/cs/HrfsKeys.java		\
 	edu/rit/cs/HrfsNode.java		\
 	edu/rit/cs/HrfsRPC.java			\
+	edu/rit/cs/HrfsRing.java		\
 	edu/rit/cs/NodeWriter.java		\
 	edu/rit/cs/MetadataBlock.java		\
 	edu/rit/cs/examples/HrfsClient.java	\

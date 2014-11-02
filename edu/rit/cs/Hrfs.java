@@ -41,8 +41,6 @@ public class Hrfs extends FileSystem
 	private static final Log LOG = LogFactory.getLog(Hrfs.class);
 
 	private HrfsConfiguration conf;
-	private String[] nodeHosts;
-	private List<HrfsRPC> rpcs;
 
 	/**
 	 * Default configuration, stub.
@@ -50,8 +48,6 @@ public class Hrfs extends FileSystem
 	public Hrfs()
 	{
 		conf = new HrfsConfiguration();
-		nodeHosts = conf.getStrings(HrfsKeys.HRFS_CLIENT_NODES);
-		rpcs = new ArrayList<HrfsRPC>();
 	}
 
 	/**
