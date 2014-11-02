@@ -9,11 +9,15 @@
  * This also runs as a seperate server thread within the Node, and
  * acts on a typical multicast group network.
  */
-package edu.rit.cs;
+package edu.rit.cs.cluster;
 
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
@@ -24,6 +28,9 @@ import org.apache.hadoop.util.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import edu.rit.cs.HrfsConfiguration;
+import edu.rit.cs.HrfsKeys;
+
 public class ClusterAgent
 {
 	static
@@ -33,6 +40,7 @@ public class ClusterAgent
 
 	private static final Log LOG = LogFactory.getLog(ClusterAgent.class);
 	private static int MAX_UDP_SIZE	= 65507; // Max UDP packet size in bytes
+	private static long STATE_WAIT_TIME = 10; // 10 Second accept time for states
 
 	private HrfsConfiguration conf;
 	private PrintWriter swriter;
@@ -42,6 +50,7 @@ public class ClusterAgent
 	private ClusterClient client;
 	private String addr;
 	private int port;
+	private ExecutorService executor;
 
 	/**
 	 * Build the node cluster agent, listen on the configured multicast
@@ -59,6 +68,7 @@ public class ClusterAgent
 		this.conf = new HrfsConfiguration();
 		this.addr = conf.get(HrfsKeys.HRFS_NODE_GROUP_ADDRESS, "224.0.1.150");
 		this.port = conf.getInt(HrfsKeys.HRFS_NODE_GROUP_PORT, 1246);
+		this.executor = Executors.newSingleThreadExecutor();
 
 		try {
 			this.socket = new MulticastSocket(this.port);
@@ -71,6 +81,18 @@ public class ClusterAgent
 			LOG.info("Starting cluster multicast listener thread");
 			this.listener = new MulticastListener();
 			this.listener.start();
+
+
+			LOG.info("Sending new cluster agent announce");
+			executor.invokeAll(Arrays.asList(new StateListener()),
+					   STATE_WAIT_TIME,
+					   TimeUnit.SECONDS);
+
+			/* Send out announcement of join */
+			announce();
+		}
+		catch(InterruptedException e) {
+			/* XXX Handle more appropriately */			
 		}
 		catch(UnknownHostException e) {
 			LOG.fatal("Unknown group address: " +
@@ -81,10 +103,56 @@ public class ClusterAgent
 				  e.toString());
 			System.exit(1);
 		}
+	}
 
-		/* Send out announcement of join */
-		LOG.info("Sending new cluster agent announce");
-		announce();
+	/**
+	 * Worker thread that listens on a random tcp port, waiting for serialized
+	 * state information about the cluster. This is typically given after an
+	 * announcement about a new node has been issued.
+	 */
+	private class StateListener
+		implements Callable<StateListener>
+	{
+		ServerSocket stsock;
+
+		/** Default constructor */
+		public StateListener()
+		{
+			try {
+				/* Random port, but given address */
+				stsock = new ServerSocket(0);
+			}
+			catch(IOException e) {
+				LOG.fatal("Unable to start state listener thread: " + e.toString());
+				System.exit(1);
+			}
+		}
+
+		/**
+		 * Run routine for the TCP state listener thread, when a new cluster state
+		 * is sent, it will come through this listener.
+		 */
+		@Override
+		public StateListener call()
+		{
+			int p;
+
+			p = 0;
+			for(;;) {
+				if(p > 10)
+					break;
+				try {
+					System.out.println("tralalal " + p);
+					Thread.sleep(1000);
+					++p;
+				}
+				catch(InterruptedException e) {
+					System.out.println("interrupted");
+				}
+			}
+			return this;
+		}
+
 	}
 
 	/**
@@ -101,10 +169,10 @@ public class ClusterAgent
 		}
 
 		/**
-		 * Run routine for the listener thread, handles incoming multicast messages
+		 * Run routine for the multicast listener thread, handles incoming multicast messages
 		 * to the cluster, and relays them to the agent.
 		 *
-		 * XXX Log messages are not shown, even when you use the LogFactory to create
+		 * XXX Log messages are not _always_ shown, even when you use the LogFactory to create
 		 * 	a new one specifically for the inner class. They are present for when
 		 *	a solution has been found.
 		 */

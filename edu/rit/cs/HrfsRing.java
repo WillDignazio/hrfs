@@ -20,10 +20,9 @@ import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
 
 public final class HrfsRing
-	implements Serializable, Comparable<HrfsRing>
+	implements Serializable
 {
 	private List<String> hosts;
-	private long htime;
 
 	/**
 	 * Hrfs Rings are immutable structures, and new ones
@@ -32,31 +31,6 @@ public final class HrfsRing
 	 */
 	public HrfsRing(List<String> hosts)
 	{
-		this.htime = System.nanoTime();
-	}
-
-	/**
-	 * Returns the hash ring creation time for this hash ring.
-	 * @return htime Hrfs Ring creation time.
-	 */
-	public long getHTime()
-	{
-		return this.htime;
-	}
-
-	/**
-	 * Override of the compareTo for htime comparison, this compares
-	 * to Hrfs Rings for priority.
-	 * @param ring Hrfs Ring to compare against
-	 */
-	@Override
-	public int compareTo(HrfsRing ring)
-	{
-		if(this.htime > ring.getHTime())
-			return 1;
-		else if(this.htime < ring.getHTime())
-			return -1;
-
-		return 0;
+		this.hosts = hosts;
 	}
 }

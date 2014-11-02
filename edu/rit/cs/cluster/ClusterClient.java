@@ -5,7 +5,7 @@
  * Client interface for a cluster member, interacts with a 
  * cluster agent to maintain and join the cluster state.
  */
-package edu.rit.cs;
+package edu.rit.cs.cluster;
 
 public interface ClusterClient
 {
@@ -19,6 +19,7 @@ public interface ClusterClient
 	/**
 	 * Get host port used for TCP data connections, as with the
 	 * address, this will be passed to the other cluster members.
+	 * @return int Host tcp port
 	 */
 	public int getHostPort();
 }
