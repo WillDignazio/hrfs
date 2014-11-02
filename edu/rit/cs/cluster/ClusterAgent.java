@@ -85,10 +85,6 @@ public class ClusterAgent
 			this.listener = new MulticastListener();
 			this.listener.start();
 
-			LOG.info("Sending new cluster agent announce");
-			/* Start a listener for state transmission */
-			executor.execute(new StateListener());
-
 			/* Send out announcement of join */
 			announce();
 		}
@@ -191,20 +187,46 @@ public class ClusterAgent
 			ObjectInputStream istream;
 			Socket insock;
 			long time;
+			int cmp;
+
+			cmp = 0;
 
 			/* Fancy way of saying wait for STATE_WAIT_TIME */
-			time = System.nanoTime() + TimeUnit.SECONDS.toNanos(STATE_WAIT_TIME-1);
+			time = System.nanoTime() + TimeUnit.SECONDS.toNanos(STATE_WAIT_TIME);
 			for (;time>System.nanoTime();) {
 				try {
 					/* Poll for socket connection */
-					LOG.info("Accepting state connection from remote host");
+					LOG.info("Accepting state connection from remote host...");
 					insock = stsock.accept();
 					istream = new ObjectInputStream(insock.getInputStream());
 
 					LOG.info("Received connection from " + insock.getRemoteSocketAddress().toString());
 					istate = (ClusterState)istream.readObject();
+					LOG.info("Received cluster timestamp: " + istate.getTimestamp());
 
-					LOG.debug("Received cluster timestamp: " + istate.getTimestamp());
+					if(state == null) {
+						LOG.info("Received new cluster state when I didn't have one");
+						state = istate;
+						continue;
+					}
+
+					cmp = state.compareTo(istate);
+					if(cmp < 0) {
+						LOG.info("Our state older than new state, accepting new one");
+						state = istate;
+					}
+				}
+				catch(SocketTimeoutException e) {
+					LOG.warn("Maximum time spent waiting for state.");
+					if(state == null) {
+						LOG.info("Building new single state");
+						state = newSingleState();
+						continue;
+					}
+					else {
+						LOG.info("That's alright, we have some state to work with");
+						continue;
+					}
 				}
 				catch(ClassNotFoundException e) {
 					LOG.warn("Invalid Cluster State received");
@@ -319,21 +341,21 @@ public class ClusterAgent
 		ObjectOutputStream ostream;
 
 		if(this.state == null) {
-			LOG.warn("Cluster state null, constructing node.");
+			LOG.warn("Cluster state null, aborting sendState, node in construction");
 			return; // Just quit here
 		}
 
 		LOG.info("Sending state to " + host + " on port " + port);
 		try {
 			osock = new Socket(host, port);
-			osock.setSoTimeout(1000 * 10); // 10 Seconds
+			osock.setSoTimeout(1000 * (int)STATE_WAIT_TIME); // 10 Seconds
 
 			ostream = new ObjectOutputStream(osock.getOutputStream());
 			ostream.writeObject(this.state);
 
-			LOG.info("Sent state to recipient: " + host);
 			ostream.flush();
 			osock.close();
+			LOG.info("Sent state to recipient: " + host + ":" + port);
 		}
 		catch(UnknownHostException e) {
 			LOG.warn("Unable to resolve state recipient: " + host);
@@ -359,7 +381,10 @@ public class ClusterAgent
 			slistener = new StateListener();
 			cport = slistener.getListenerPort();
 			caddr = slistener.getListenerHostAddress();
-			
+
+			/* Start new state listener to receive announce response */
+			executor.execute(slistener);
+
 			/* XXX Endianness might be a problem */
 			out = "announce!" + caddr + "!" + cport;
 			packet = new DatagramPacket(out.getBytes(), out.length(), this.group, this.port);
