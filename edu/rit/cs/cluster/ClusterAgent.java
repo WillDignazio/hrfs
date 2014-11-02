@@ -41,6 +41,7 @@ public class ClusterAgent
 	private static final Log LOG = LogFactory.getLog(ClusterAgent.class);
 	private static int MAX_UDP_SIZE	= 65507; // Max UDP packet size in bytes
 	private static long STATE_WAIT_TIME = 10; // 10 Second accept time for states
+	private static int THREAD_POOL_SIZE = 5;
 
 	private HrfsConfiguration conf;
 	private PrintWriter swriter;
@@ -68,7 +69,7 @@ public class ClusterAgent
 		this.conf = new HrfsConfiguration();
 		this.addr = conf.get(HrfsKeys.HRFS_NODE_GROUP_ADDRESS, "224.0.1.150");
 		this.port = conf.getInt(HrfsKeys.HRFS_NODE_GROUP_PORT, 1246);
-		this.executor = Executors.newSingleThreadExecutor();
+		this.executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
 		try {
 			this.socket = new MulticastSocket(this.port);
@@ -82,17 +83,12 @@ public class ClusterAgent
 			this.listener = new MulticastListener();
 			this.listener.start();
 
-
 			LOG.info("Sending new cluster agent announce");
-			executor.invokeAll(Arrays.asList(new StateListener()),
-					   STATE_WAIT_TIME,
-					   TimeUnit.SECONDS);
+			/* Start a listener for state transmission */
+			executor.execute(new StateListener());
 
 			/* Send out announcement of join */
 			announce();
-		}
-		catch(InterruptedException e) {
-			/* XXX Handle more appropriately */			
 		}
 		catch(UnknownHostException e) {
 			LOG.fatal("Unknown group address: " +
@@ -111,7 +107,7 @@ public class ClusterAgent
 	 * announcement about a new node has been issued.
 	 */
 	private class StateListener
-		implements Callable<StateListener>
+		implements Runnable
 	{
 		ServerSocket stsock;
 
@@ -121,6 +117,7 @@ public class ClusterAgent
 			try {
 				/* Random port, but given address */
 				stsock = new ServerSocket(0);
+				stsock.setSoTimeout((int)STATE_WAIT_TIME * 1000);
 			}
 			catch(IOException e) {
 				LOG.fatal("Unable to start state listener thread: " + e.toString());
@@ -133,24 +130,44 @@ public class ClusterAgent
 		 * is sent, it will come through this listener.
 		 */
 		@Override
-		public StateListener call()
+		public void run()
 		{
-			int p;
+			ClusterState istate;
+			ObjectInputStream istream;
+			Socket insock;
+			long time;
 
-			p = 0;
-			for(;;) {
-				if(p > 10)
-					break;
+			/* Fancy way of saying wait for STATE_WAIT_TIME */
+			time = System.nanoTime() + TimeUnit.SECONDS.toNanos(STATE_WAIT_TIME);
+			for (;time>System.nanoTime();) {
 				try {
-					System.out.println("tralalal " + p);
-					Thread.sleep(1000);
-					++p;
+					/* Poll for socket connection */
+					insock = stsock.accept();
+					istream = new ObjectInputStream(insock.getInputStream());
+
+					LOG.info("Received connection from " + insock.getRemoteSocketAddress().toString());
+					istate = (ClusterState)istream.readObject();
+
+					LOG.debug("Received cluster timestamp: " + istate.getTimestamp());
 				}
-				catch(InterruptedException e) {
-					System.out.println("interrupted");
+				catch(ClassNotFoundException e) {
+					LOG.warn("Invalid Cluster State received");
+					continue;
+				}
+				catch(IOException e) {
+					LOG.warn("Exception while accepting data from inbound cluster connection: " + e.toString());
+					continue;
 				}
 			}
-			return this;
+
+			/* Close up connection */
+			try {
+				stsock.close();
+			}
+			catch(IOException e)
+			{
+				LOG.warn("Failed to properly cleanup StateListener socket");
+			}
 		}
 
 	}
