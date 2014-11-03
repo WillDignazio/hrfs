@@ -26,7 +26,6 @@ import edu.rit.cs.HrfsRing;
 import edu.rit.cs.cluster.ClusterAgent;
 
 public class HrfsNode
-	extends Configured
 	implements HrfsRPC
 {
 	static
@@ -54,7 +53,6 @@ public class HrfsNode
 	public HrfsNode()
 		throws IOException
 	{
-
 		server = null;
 		conf = new HrfsConfiguration();
 		datadir = new File(conf.get(HrfsKeys.HRFS_NODE_PATH));
@@ -131,16 +129,6 @@ public class HrfsNode
 		return workq.size();
 	}
 
-	/**
-	 * Implements the method for configured, returns the 
-	 * HrfsConfiguration that is installed within the node.
-	 */
-	@Override
-	public Configuration getConf()
-	{
-		return this.conf;
-	}
-
 	/** Get a block from the node */
 	@Override
 	public byte[] getBlock(String key)
@@ -182,17 +170,6 @@ public class HrfsNode
 	public boolean delBlock(String key)
 	{
 		return false;
-	}
-
-	/**
-	 * Implements the method for configured, sets the
-	 * configuration file for the node.
-	 * @param conf Configuration object
-	 */
-	@Override
-	public void setConf(Configuration conf)
-	{
-		this.conf = (HrfsConfiguration)conf;
 	}
 
 	/**
