@@ -16,7 +16,8 @@ package edu.rit.cs.cluster;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,7 +33,10 @@ class StateServer
 		HrfsConfiguration.init();
 	}
 
+	private static final int THREAD_POOL_SIZE = 10;
+
 	private static final Log LOG = LogFactory.getLog(StateServer.class);
+	private ExecutorService executor;
 	private ClusterState state;
 	private StateListener listener;
 	private HrfsConfiguration conf;
@@ -51,6 +55,7 @@ class StateServer
 		this.conf = new HrfsConfiguration();
 		this.listener = listener;
 		this.state = null;
+		this.executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
 		try {
 			/* Random port, but given address */
@@ -60,7 +65,63 @@ class StateServer
 			LOG.fatal("Unable to start state listener thread: " + e.toString());
 			System.exit(1);
 		}
+	}
 
+	/**
+	 * Send the state to a remote host given at the address and port.
+	 * This is typically after an announcement has been picked up from
+	 * the MulticastListener.
+	 */
+	public void sendState(String host, int port)
+	{
+		this.executor.execute(new StateServlet(host, port));
+	}
+
+	/**
+	 * Servlet that can be used to asychronously send a state
+	 * to another host. This is generally used by an executor
+	 * service that manages a thread pool of them.
+	 */
+	private class StateServlet
+		implements Runnable
+	{
+		String host;
+		int port;
+
+		public StateServlet(String host, int port)
+		{
+			this.host = host;
+			this.port = port;
+		}
+
+		public void run()
+		{
+			Socket osock;
+			ObjectOutputStream ostream;
+
+			if(state == null) {
+				LOG.warn("Cluster state null, aborting sendState, node in construction");
+				return; // Just quit here
+			}
+
+			try {
+				osock = new Socket(host, port);
+				osock.setSoTimeout(1000 * 10); // 10 Seconds
+
+				ostream = new ObjectOutputStream(osock.getOutputStream());
+				ostream.writeObject(state);
+
+				ostream.flush();
+				osock.close();
+				LOG.info("Sent state to recipient: " + host + ":" + port);
+			}
+			catch(UnknownHostException e) {
+				LOG.error("Unable to resolve state recipient: " + host);
+			}
+			catch(IOException e) {
+				LOG.error("Failed to send state to recipient.");
+			}
+		}
 	}
 
 	/**

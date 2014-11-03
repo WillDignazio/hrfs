@@ -50,7 +50,6 @@ public class ClusterAgent
 	private String addr;
 	private int port;
 
-	private ClusterClient client;
 	private ClusterState state;
 	private	StateServer serv;
 
@@ -59,14 +58,8 @@ public class ClusterAgent
 	 * group from Hadoop. This will be the network that the proxy listens
 	 * for cluster anouncements and configuration changes.
 	 */
-	public ClusterAgent(ClusterClient client)
+	public ClusterAgent()
 	{
-		if(client == null) {
-			LOG.fatal("Invalid cluster client");
-			System.exit(1);
-		}
-
-		this.client = client;
 		this.conf = new HrfsConfiguration();
 		this.addr = conf.get(HrfsKeys.HRFS_NODE_GROUP_ADDRESS, "224.0.1.150");
 		this.port = conf.getInt(HrfsKeys.HRFS_NODE_GROUP_PORT, 1246);
@@ -75,12 +68,9 @@ public class ClusterAgent
 		try {
 			this.socket = new MulticastSocket(this.port);
 			this.group = InetAddress.getByName(this.addr);
-
-			LOG.info("Joining cluster on mulitcast group: " + group.toString());
 			socket.joinGroup(group);
 
 			/* Start a listener thread on the socket. */
-			LOG.info("Starting cluster multicast listener thread");
 			this.listener = new MulticastListener();
 			this.listener.start();
 
@@ -117,12 +107,14 @@ public class ClusterAgent
 		}
 
 		/**
-		 * Run routine for the multicast listener thread, handles incoming multicast messages
-		 * to the cluster, and relays them to the agent.
+		 * Run routine for the multicast listener thread, handles
+		 * incoming multicast messages to the cluster, and relays
+		 * them to the agent.
 		 *
-		 * XXX Log messages are not _always_ shown, even when you use the LogFactory to create
-		 * 	a new one specifically for the inner class. They are present for when
-		 *	a solution has been found.
+		 * XXX	Log messages are not _always_ shown, even when you use
+		 *     	the LogFactory to create a new one specifically for the
+		 * 	inner class. They are present for when a solution has
+		 * 	been found.
 		 */
 		@Override
 		public void run()
@@ -169,7 +161,7 @@ public class ClusterAgent
 				{
 				case "announce":
 					LOG.info("Got announce: " + new String(data));
-					sendState(smsg[1], Integer.parseInt(smsg[2].trim()));
+					serv.sendState(smsg[1], Integer.parseInt(smsg[2].trim()));
 					break;
 				case "join":
 					LOG.info("Got join: " + new String(data));
@@ -182,40 +174,6 @@ public class ClusterAgent
 	
 			/* Hit error or close call, try to cleanup */
 			socket.close();
-		}
-	}
-
-	/**
-	 * Send the state to a remote host given at the address and port.
-	 * This is typically after an announcement has been picked up from
-	 * the MulticastListener.
-	 */
-	public synchronized void sendState(String host, int port)
-	{
-		Socket osock;
-		ObjectOutputStream ostream;
-
-		if(this.state == null) {
-			LOG.warn("Cluster state null, aborting sendState, node in construction");
-			return; // Just quit here
-		}
-
-		try {
-			osock = new Socket(host, port);
-			osock.setSoTimeout(1000 * 10); // 10 Seconds
-
-			ostream = new ObjectOutputStream(osock.getOutputStream());
-			ostream.writeObject(this.state);
-
-			ostream.flush();
-			osock.close();
-			LOG.info("Sent state to recipient: " + host + ":" + port);
-		}
-		catch(UnknownHostException e) {
-			LOG.error("Unable to resolve state recipient: " + host);
-		}
-		catch(IOException e) {
-			LOG.error("Failed to send state to recipient.");
 		}
 	}
 

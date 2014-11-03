@@ -28,7 +28,7 @@ import edu.rit.cs.cluster.ClusterClient;
 
 public class HrfsNode
 	extends Configured
-	implements HrfsRPC, ClusterClient
+	implements HrfsRPC
 {
 	static
 	{
@@ -108,34 +108,12 @@ public class HrfsNode
 		}
 
 		/* Build cluster proxy */
-		this.cagent = new ClusterAgent(this);
+		this.cagent = new ClusterAgent();
 
 		/* Start Node Daemons */
 		this.server.start();
 	}
 
-	/**
-	 * Lets a cluster agent know what TCP address we might expect
-	 * to receive connections on from other nodes or hrfs clients.
-	 * @return String address of TCP server
-	 */
-	@Override
-	public String getHostAddress()
-	{
-		return this.addr;
-	}
-
-	/**
-	 * Lets a cluster agent know what TCP port we might expect
-	 * to receive connections on from other nodes or hrfs clients.
-	 * @return int Port that we're listening on.
-	 */
-	@Override
-	public int getHostPort()
-	{
-		return this.port;
-	}
-	
 	/**
 	 * Ping "Am I alive method" or HrfsRPC
 	 */
