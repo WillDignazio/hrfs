@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 
 import edu.rit.cs.HrfsRing;
 import edu.rit.cs.cluster.ClusterAgent;
-import edu.rit.cs.cluster.ClusterClient;
 
 public class HrfsNode
 	extends Configured

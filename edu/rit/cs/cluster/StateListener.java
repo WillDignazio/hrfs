@@ -1,5 +1,5 @@
 /**
- * Copyright © 2014
+ * Copyright © 2014 Will Dignazio
  * State Listener
  *
  * Interface that allows one to listen for changes in cluster state
