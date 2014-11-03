@@ -11,6 +11,7 @@ JAR=	hrfs.jar
 JSRC=	edu/rit/cs/cluster/ClusterAgent.java	\
 	edu/rit/cs/cluster/ClusterClient.java	\
 	edu/rit/cs/cluster/ClusterState.java	\
+	edu/rit/cs/cluster/StateServer.java	\
 	edu/rit/cs/Hrfs.java			\
 	edu/rit/cs/HrfsConfiguration.java	\
 	edu/rit/cs/HrfsKeys.java		\

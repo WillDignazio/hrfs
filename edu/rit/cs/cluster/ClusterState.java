@@ -31,6 +31,28 @@ public class ClusterState
 	}
 
 	/**
+	 * Considered a "blank state", used for single node instances
+	 * that are just creating/joining a cluster.
+	 */
+	public ClusterState()
+	{
+		this.nactive = 1;
+		this.ndead = 0;
+		this.timestamp = 0; // For immediate revision
+	}
+
+	/**
+	 * Utility method that generates a valid single node state.
+	 * This is useful for when a new cluster is created, and the
+	 * participating node doesn't have any state.
+	 * @return Single node state
+	 */
+	public static ClusterState getSingleState()
+	{
+		return new ClusterState();
+	}
+
+	/**
 	 * Override of the compareTo for timestamp comparison, this compares
 	 * to Cluster States for priority.
 	 * @param state State to compare against

@@ -8,16 +8,15 @@
  *
  * This also runs as a seperate server thread within the Node, and
  * acts on a typical multicast group network.
+ *
+ * @author Will Dignazio <wdignazio@gmail.com>
+ * @file ClusterAgent.java
  */
 package edu.rit.cs.cluster;
 
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
@@ -32,6 +31,7 @@ import edu.rit.cs.HrfsConfiguration;
 import edu.rit.cs.HrfsKeys;
 
 public class ClusterAgent
+	implements StateListener
 {
 	static
 	{
@@ -40,7 +40,6 @@ public class ClusterAgent
 
 	private static final Log LOG = LogFactory.getLog(ClusterAgent.class);
 	private static int MAX_UDP_SIZE	= 65507; // Max UDP packet size in bytes
-	private static long STATE_WAIT_TIME = 10; // 10 Second accept time for states
 	private static int THREAD_POOL_SIZE = 5;
 
 	private HrfsConfiguration conf;
@@ -50,10 +49,10 @@ public class ClusterAgent
 	private MulticastListener listener;
 	private String addr;
 	private int port;
-	private ExecutorService executor;
 
 	private ClusterClient client;
 	private ClusterState state;
+	private	StateServer serv;
 
 	/**
 	 * Build the node cluster agent, listen on the configured multicast
@@ -71,7 +70,7 @@ public class ClusterAgent
 		this.conf = new HrfsConfiguration();
 		this.addr = conf.get(HrfsKeys.HRFS_NODE_GROUP_ADDRESS, "224.0.1.150");
 		this.port = conf.getInt(HrfsKeys.HRFS_NODE_GROUP_PORT, 1246);
-		this.executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+		this.serv = new StateServer(this);
 
 		try {
 			this.socket = new MulticastSocket(this.port);
@@ -84,6 +83,9 @@ public class ClusterAgent
 			LOG.info("Starting cluster multicast listener thread");
 			this.listener = new MulticastListener();
 			this.listener.start();
+
+			/* Start the State Server */
+			this.serv.start();
 
 			/* Send out announcement of join */
 			announce();
@@ -99,156 +101,7 @@ public class ClusterAgent
 		}
 	}
 
-	/**
-	 * Worker thread that listens on a random tcp port, waiting for serialized
-	 * state information about the cluster. This is typically given after an
-	 * announcement about a new node has been issued.
-	 */
-	private class StateListener
-		implements Runnable
-	{
-		ServerSocket stsock;
-		String host;
-		int port;
 
-		/** Default constructor */
-		public StateListener()
-		{
-			try {
-				/* Random port, but given address */
-				stsock = new ServerSocket(0);
-				stsock.setSoTimeout((int)STATE_WAIT_TIME * 1000);
-			}
-			catch(IOException e) {
-				LOG.fatal("Unable to start state listener thread: " + e.toString());
-				System.exit(1);
-			}
-		}
-
-		/**
-		 * Returns the host address of the listener socket.
-		 * @return host Host Address of socket
-		 */
-		public String getListenerHostAddress()
-		{
-			String out;
-
-			out = null;
-			if(this.stsock == null)
-				return null;
-
-			/**
-			 * In typical java form, there is not a good way to
-			 * get a publicly available address. Admiteddly  this
-			 * gets a little weird since the StateListener listens
-			 * on all available addresses.
-			 *
-			 * So for this instance, we're going to use the same
-			 * known address configured for the node.
-			 */
-			return conf.get(HrfsKeys.HRFS_NODE_ADDRESS,
-					"127.0.0.1");
-		}
-
-		/**
-		 * Reurns the host port of the listener socket.
-		 * @return port Return port of listener socket
-		 */
-		public int getListenerPort()
-		{
-			if(this.stsock == null)
-				return -1;
-
-			return this.stsock.getLocalPort();
-		}
-
-		/**
-		 * In the event that we fail to receive a state from other members of the
-		 * cluster, we are going to create a new singular state that represents
-		 * a single node cluster.
-		 */
-		private ClusterState newSingleState()
-		{
-			/*
-			 * XXX This is pretty bad design, 
-			 * needs a real state constructur
-			 */
-			return new ClusterState(1, 0);
-		}
-
-		/**
-		 * Run routine for the TCP state listener thread, when a new cluster state
-		 * is sent, it will come through this listener.
-		 */
-		@Override
-		public void run()
-		{
-			ClusterState istate;
-			ObjectInputStream istream;
-			Socket insock;
-			long time;
-			int cmp;
-
-			cmp = 0;
-
-			/* Fancy way of saying wait for STATE_WAIT_TIME */
-			time = System.nanoTime() + TimeUnit.SECONDS.toNanos(STATE_WAIT_TIME);
-			for (;time>System.nanoTime();) {
-				try {
-					/* Poll for socket connection */
-					LOG.info("Accepting state connection from remote host...");
-					insock = stsock.accept();
-					istream = new ObjectInputStream(insock.getInputStream());
-
-					LOG.info("Received connection from " + insock.getRemoteSocketAddress().toString());
-					istate = (ClusterState)istream.readObject();
-					LOG.info("Received cluster timestamp: " + istate.getTimestamp());
-
-					if(state == null) {
-						LOG.info("Received new cluster state when I didn't have one");
-						state = istate;
-						continue;
-					}
-
-					cmp = state.compareTo(istate);
-					if(cmp < 0) {
-						LOG.info("Our state older than new state, accepting new one");
-						state = istate;
-					}
-				}
-				catch(SocketTimeoutException e) {
-					LOG.warn("Maximum time spent waiting for state.");
-					if(state == null) {
-						LOG.info("Building new single state");
-						state = newSingleState();
-						continue;
-					}
-					else {
-						LOG.info("That's alright, we have some state to work with");
-						continue;
-					}
-				}
-				catch(ClassNotFoundException e) {
-					LOG.warn("Invalid Cluster State received");
-					continue;
-				}
-				catch(IOException e) {
-					LOG.warn("Exception while accepting data from inbound cluster connection: " + e.toString());
-					continue;
-				}
-			}
-
-			/* Close up connection */
-			try {
-				stsock.close();
-			}
-			catch(IOException e)
-			{
-				LOG.warn("Failed to properly cleanup StateListener socket");
-			}
-		}
-
-	}
 
 	/**
 	 * Worker thread that listens on the multicast address for datagrams
@@ -318,7 +171,9 @@ public class ClusterAgent
 					LOG.info("Got announce: " + new String(data));
 					sendState(smsg[1], Integer.parseInt(smsg[2].trim()));
 					break;
-
+				case "join":
+					LOG.info("Got join: " + new String(data));
+					
 				default:
 					LOG.warn("Unknown cluster command: " + smsg[0]);
 					continue;
@@ -345,10 +200,9 @@ public class ClusterAgent
 			return; // Just quit here
 		}
 
-		LOG.info("Sending state to " + host + " on port " + port);
 		try {
 			osock = new Socket(host, port);
-			osock.setSoTimeout(1000 * (int)STATE_WAIT_TIME); // 10 Seconds
+			osock.setSoTimeout(1000 * 10); // 10 Seconds
 
 			ostream = new ObjectOutputStream(osock.getOutputStream());
 			ostream.writeObject(this.state);
@@ -358,10 +212,10 @@ public class ClusterAgent
 			LOG.info("Sent state to recipient: " + host + ":" + port);
 		}
 		catch(UnknownHostException e) {
-			LOG.warn("Unable to resolve state recipient: " + host);
+			LOG.error("Unable to resolve state recipient: " + host);
 		}
 		catch(IOException e) {
-			LOG.warn("Failed to send state to recipient.");
+			LOG.error("Failed to send state to recipient.");
 		}
 	}
 
@@ -370,7 +224,6 @@ public class ClusterAgent
 	 */
 	public synchronized void announce()
 	{
-		StateListener slistener;
 		DatagramPacket packet;
 		int cport;
 		String caddr;
@@ -378,12 +231,8 @@ public class ClusterAgent
 		byte[] buf;
 
 		try {
-			slistener = new StateListener();
-			cport = slistener.getListenerPort();
-			caddr = slistener.getListenerHostAddress();
-
-			/* Start new state listener to receive announce response */
-			executor.execute(slistener);
+			cport = serv.getListenerPort();
+			caddr = serv.getListenerHostAddress();
 
 			/* XXX Endianness might be a problem */
 			out = "announce!" + caddr + "!" + cport;
@@ -396,5 +245,15 @@ public class ClusterAgent
 		catch(IOException e) {
 			LOG.error("Failed to announce node join: " + e.toString());
 		}
+	}
+
+	/**
+	 * Implementation of newState, the State server has received and given us a new
+	 * state for the cluster.
+	 */
+	public void newState(ClusterState state)
+	{
+		LOG.info("ClusterAgent received new state: " + state.getTimestamp());
+		this.state = state;
 	}
 }
