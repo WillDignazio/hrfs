@@ -103,16 +103,12 @@ class MulticastServer
 			}
 
 			data = packet.getData();
-			if(data == null) {
-				LOG.error("Group socket closed");
+			if(data == null)
 				break;
-			}
-				
+
 			smsg = new String(data).split("!");
-			if(smsg == null) {
-				LOG.warn("Received invalid cluster packet");
+			if(smsg == null)
 				continue;
-			}
 
 			/**
 			 * The protocol for multiast communication is simple, and
@@ -126,14 +122,16 @@ class MulticastServer
 				break;
 			case "join":
 				LOG.info("Got join: " + new String(data));
+				listener.nodeJoin(smsg[1], Integer.parseInt(smsg[2].trim()));
 				break;
 			default:
 				LOG.warn("Unknown cluster command: " + smsg[0]);
 				continue;
 			}
 		}
-	
+
 		/* Hit error or close call, try to cleanup */
+		LOG.error("Group socket closed");
 		socket.close();
 	}
 
@@ -154,11 +152,31 @@ class MulticastServer
 			packet = new DatagramPacket(out.getBytes(), out.length(), this.group, this.port);
 			socket.send(packet);
 		}
-		catch(UnsupportedEncodingException e) {
-			LOG.error("US-ASCII unsupported, too old for commodity hardware...");
-		}
 		catch(IOException e) {
 			LOG.error("Failed to announce node join: " + e.toString());
+		}
+	}
+
+	/**
+	 * Inform the cluster that we wish to join, and share the ring space
+	 * with the rest of the nodes.
+	 * @param host Address from which a node can receive the new state from
+	 * @param port Port from which a node can receive the new state from
+	 */
+	public synchronized void join(String host, int port)
+	{
+		DatagramPacket packet;
+		String out;
+		byte[] buf;
+
+		try {
+			/* XXX Endianness */
+			out = "join!" + host + "!" + port;
+			packet = new DatagramPacket(out.getBytes(), out.length(), this.group, this.port);
+			socket.send(packet);
+		}
+		catch(IOException e) {
+			LOG.error("Failed to send node join request: " + e.toString());
 		}
 	}
 }

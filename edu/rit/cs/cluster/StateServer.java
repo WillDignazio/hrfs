@@ -72,9 +72,68 @@ class StateServer
 	 * This is typically after an announcement has been picked up from
 	 * the MulticastListener.
 	 */
-	public void sendState(String host, int port)
+	public synchronized void sendState(String host, int port)
 	{
-		this.executor.execute(new StateServlet(host, port));
+		this.executor.execute(new SendStateServlet(host, port));
+	}
+
+	/**
+	 * Receive the state from a remote host given at the address and port.
+	 * An example is when a node joins the cluster and wishes to share the new
+	 * ring state.
+	 */
+	public synchronized void recvState(String host, int port)
+	{
+		this.executor.execute(new RecvStateServlet(host, port));
+	}
+
+	/**
+	 * Servlet that can be used to asynchronously receive a state
+	 * from another host. Used in various scenarios, such as when a
+	 * new node wishes to join, or drop from the cluster.
+	 */
+	private class RecvStateServlet
+		implements Runnable
+	{
+		private String host;
+		private int port;
+
+		public RecvStateServlet(String host, int port)
+		{
+			this.host = host;
+			this.port = port;
+		}
+
+		public void run()
+		{
+			Socket isock;
+			ObjectInputStream istream;
+
+			try {
+				isock = new Socket(host, port);
+				isock.setSoTimeout(1000 * 10); // 10 Seconds
+
+				istream = new ObjectInputStream(isock.getInputStream());
+
+				synchronized(state) {
+					state = (ClusterState)istream.readObject();
+					listener.newState(state);
+					isock.close();
+				}
+
+				LOG.info("Received state (" + state.getTimestamp() +
+					 " from " + host + ":" + port);
+			}
+			catch(UnknownHostException e) {
+				LOG.error("Unabe to resolve state server: " + host + ":" + port);
+			}
+			catch(ClassNotFoundException e) {
+				LOG.error("Invalid state received from server: " + host + ":" + port);
+			}
+			catch(IOException e) {
+				LOG.error("Failed to receive state from server: " + host +  ":" + port);
+			}
+		}
 	}
 
 	/**
@@ -82,13 +141,13 @@ class StateServer
 	 * to another host. This is generally used by an executor
 	 * service that manages a thread pool of them.
 	 */
-	private class StateServlet
+	private class SendStateServlet
 		implements Runnable
 	{
-		String host;
-		int port;
+		private String host;
+		private int port;
 
-		public StateServlet(String host, int port)
+		public SendStateServlet(String host, int port)
 		{
 			this.host = host;
 			this.port = port;
@@ -99,20 +158,20 @@ class StateServer
 			Socket osock;
 			ObjectOutputStream ostream;
 
-			if(state == null) {
-				LOG.warn("Cluster state null, aborting sendState, node in construction");
+			if(state == null)
 				return; // Just quit here
-			}
 
 			try {
 				osock = new Socket(host, port);
 				osock.setSoTimeout(1000 * 10); // 10 Seconds
 
 				ostream = new ObjectOutputStream(osock.getOutputStream());
-				ostream.writeObject(state);
+				synchronized(state) {
+					ostream.writeObject(state);
+					ostream.flush();
+					osock.close();
+				}
 
-				ostream.flush();
-				osock.close();
 				LOG.info("Sent state to recipient: " + host + ":" + port);
 			}
 			catch(UnknownHostException e) {
@@ -176,12 +235,11 @@ class StateServer
 
 		cmp = 0;
 
-		/* 
+		/*
 		 * We may try to load a state from disk, but if we
 		 * don't, we need to make a dummy one.
 		 */
 		if(state == null) {
-			LOG.info("Starting server with single node state");
 			state = ClusterState.getSingleState();
 			listener.newState(state);
 		}

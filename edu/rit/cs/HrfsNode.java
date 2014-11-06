@@ -142,7 +142,7 @@ public class HrfsNode
 	{
 		String out;
 		NodeWriter writer;
-		
+
 		out = null;
 		try {
 			writer = new NodeWriter(conf.get(HrfsKeys.HRFS_NODE_PATH));

@@ -10,21 +10,27 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+import edu.rit.cs.HrfsKeys;
 import edu.rit.cs.HrfsRing;
 
 public class ClusterState
 	implements Serializable, Comparable<ClusterState>
 {
-	private int nactive;		// # of known active noes
-	private int ndead;		// # of known dead nodes
-	private long timestamp;		// Monotonic timestamp
+	private HrfsRing ring;			// Hrfs Ring object
+	private int nactive;			// # of known active noes
+	private int ndead;			// # of known dead nodes
+	private long timestamp;			// Monotonic timestamp
 
 	/**
 	 * ClusterState objects are also immutable, so they must
 	 * be constructed with all fields initalized.
+	 * @param nactive Number of active nodes
+	 * @param ndead Number of dead nodes 
+	 * @param ring Hrfs Ring object
 	 */
-	public ClusterState(int nactive, int ndead)
+	public ClusterState(int nactive, int ndead, HrfsRing ring)
 	{
+		this.ring = ring;
 		this.nactive = nactive;
 		this.ndead = ndead;
 		this.timestamp = System.currentTimeMillis();
@@ -32,13 +38,16 @@ public class ClusterState
 
 	/**
 	 * Considered a "blank state", used for single node instances
-	 * that are just creating/joining a cluster.
+	 * that are just creating/joining a cluster. This state has
+	 * a timestamp of 0 to allow any new state to override it.
+	 * @param host Host address of initial node
 	 */
 	public ClusterState()
 	{
+		this.ring = new HrfsRing();
 		this.nactive = 1;
 		this.ndead = 0;
-		this.timestamp = 0; // For immediate revision
+		this.timestamp = 0;
 	}
 
 	/**

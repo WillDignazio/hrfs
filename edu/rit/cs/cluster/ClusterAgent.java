@@ -64,6 +64,10 @@ public class ClusterAgent
 		/* Announce presence on network */
 		mcserv.announce(stserv.getListenerHostAddress(),
 				stserv.getListenerPort());
+
+		/* I want to join the cluster */
+		mcserv.join(stserv.getListenerHostAddress(),
+			    stserv.getListenerPort());
 	}
 
 	/**
@@ -76,6 +80,18 @@ public class ClusterAgent
 	public void newNode(String host, int port)
 	{
 		stserv.sendState(host, port);
+	}
+
+	/**
+	 * A node is joining the cluster, and we need to fetch a new state from them.
+	 * This state will supposedly be the new state of the cluster.
+	 * @param host Host to receive new state from
+	 * @param port Port to receive new state from
+	 */
+	@Override
+	public void nodeJoin(String host, int port)
+	{
+		stserv.recvState(host, port);
 	}
 
 	/**

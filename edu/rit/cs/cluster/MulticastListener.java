@@ -18,4 +18,12 @@ interface MulticastListener
 	 * @param port Port that node is expecting state from
 	 */
 	public void newNode(String host, int port);
+
+	/**
+	 * A node wishes to join the cluster, and has derived a new state
+	 * from it, we need to fetch that state and do something with it.
+	 * @param host Host to receive the new cluster state from.
+	 * @param port Port to receive the new cluster state from.
+	 */
+	public void nodeJoin(String host, int port);
 }
