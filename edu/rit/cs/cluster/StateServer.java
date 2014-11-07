@@ -38,6 +38,7 @@ class StateServer
 	private static final Log LOG = LogFactory.getLog(StateServer.class);
 	private ExecutorService executor;
 	private ClusterState state;
+	private PersistentSendServer pserv;
 	private StateListener listener;
 	private HrfsConfiguration conf;
 	private ServerSocket stsock;
@@ -54,17 +55,40 @@ class StateServer
 
 		this.conf = new HrfsConfiguration();
 		this.listener = listener;
-		this.state = null;
 		this.executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+		this.pserv = new PersistentSendServer();
+
+		this.state = null;
+		this.stsock = null;
+		this.host = null;
+		this.port = -1;
 
 		try {
 			/* Random port, but given address */
 			stsock = new ServerSocket(0);
+			this.pserv.start();
 		}
 		catch(IOException e) {
 			LOG.fatal("Unable to start state listener thread: " + e.toString());
 			System.exit(1);
 		}
+	}
+
+	/**
+	 * Sets the internal state the server shall serve, this could be
+	 * for a new cluster state, or a fix to broken ring.
+	 */
+	public void setState(ClusterState istate)
+	{
+		synchronized(this.state) {
+			if(this.state.compareTo(istate) > 0) {
+				LOG.error("Internal state newer than given state setState parameter");
+				return;
+			}
+
+			this.state = istate;
+		}
+				
 	}
 
 	/**
@@ -122,7 +146,7 @@ class StateServer
 				}
 
 				LOG.info("Received state (" + state.getTimestamp() +
-					 " from " + host + ":" + port);
+					 " from " + host + ":" + port + ")");
 			}
 			catch(UnknownHostException e) {
 				LOG.error("Unabe to resolve state server: " + host + ":" + port);
@@ -184,6 +208,15 @@ class StateServer
 	}
 
 	/**
+	 * Gets the port that is serving the nodes current state.
+	 * @return port Port that state can be retrieved from.
+	 */
+	public int getServerPort()
+	{
+		return this.pserv.getPort();
+	}
+	
+	/**
 	 * Returns the host address of the listener socket.
 	 * @return host Host Address of socket
 	 */
@@ -221,6 +254,72 @@ class StateServer
 	}
 
 	/**
+	 * Persistent sending thread that upon request sends the state to the accepted client.
+	 */
+	private class PersistentSendServer
+		extends Thread
+	{
+		ObjectOutputStream ostream;
+		ServerSocket psock;
+
+		public PersistentSendServer()
+		{
+			try {
+				this.psock = new ServerSocket(0);
+				LOG.info("Persistent server port: " + this.psock.getLocalPort());
+			}
+			catch(IOException e) {
+				LOG.error("Failed to create persistent state server: " +
+					  e.toString());
+				System.exit(1);
+			}
+		}
+
+		/**
+		 * Returns the port that the persistent server is willing to send
+		 * the State to.
+		 * @return port Port one can retrieve this nodes state from
+		 */
+		public int getPort()
+		{
+			if(this.psock == null) {
+				LOG.error("Persistent State Server not initialized");
+				return -1;
+			}
+			return this.psock.getLocalPort();
+		}
+		
+		/**
+		 * Constantly listens for connections asking for the state
+		 * of the cluster. This responds with the cluster state.
+		 */
+		@Override
+		public void run() {
+			for(;;) {
+				try {
+					Socket osock;
+
+					osock = psock.accept();
+					ostream = new ObjectOutputStream(osock.getOutputStream());
+					synchronized(state) {
+						ostream.writeObject(state);
+						ostream.flush();
+						LOG.info("Sent state from persistent server -> " +
+							 osock.getRemoteSocketAddress().toString());
+						ostream.close();
+					}
+
+					osock.close();
+				}
+				catch(IOException e) {
+					LOG.error("Failed to send state to recipient from persisten state server");
+					continue;
+				}
+			}
+		}
+	}
+	
+	/**
 	 * Run routine for the TCP state listener thread, when a new cluster state
 	 * is sent, it will come through this listener.
 	 */
@@ -244,7 +343,7 @@ class StateServer
 			listener.newState(state);
 		}
 
-		for (;;) {
+		for(;;) {
 			try {
 				/* Poll for socket connection */
 				insock = stsock.accept();

@@ -78,6 +78,16 @@ public class ClusterState
 	}
 
 	/**
+	 * Returns the ring state assoicated with the 
+	 * cluster.
+	 * @return ring Current ring state
+	 */
+	public HrfsRing getRing()
+	{
+		return this.ring;
+	}
+
+	/**
 	 * Returns the number of known active nodes.
 	 * @return int Number of active Nodes
 	 */

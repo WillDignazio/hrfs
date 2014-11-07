@@ -27,6 +27,8 @@ import org.apache.hadoop.util.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import edu.rit.cs.HrfsRing;
+import edu.rit.cs.HrfsNode;
 import edu.rit.cs.HrfsConfiguration;
 import edu.rit.cs.HrfsKeys;
 
@@ -45,14 +47,16 @@ public class ClusterAgent
 	private ClusterState state;
 	private	StateServer stserv;
 	private MulticastServer mcserv;
+	private HrfsNode node; /* xxx Bad. */
 
 	/**
 	 * Build the node cluster agent, listen on the configured multicast
 	 * group from Hadoop. This will be the network that the proxy listens
 	 * for cluster anouncements and configuration changes.
 	 */
-	public ClusterAgent()
+	public ClusterAgent(HrfsNode node /* XXX Temporary */)
 	{
+		this.node = node; /* XXX Got to go */
 		this.conf = new HrfsConfiguration();
 		this.stserv = new StateServer(this);
 		this.mcserv = new MulticastServer(this);
@@ -61,13 +65,48 @@ public class ClusterAgent
 		this.mcserv.start();
 		this.stserv.start();
 
+		/* Configure params */
+		this.state = null;
+
 		/* Announce presence on network */
 		mcserv.announce(stserv.getListenerHostAddress(),
 				stserv.getListenerPort());
 
+		/* 
+		 * XXX Needs better way, relies on same socket timeout
+		 * that the state server has.
+		 */
+		try {
+			Thread.sleep(10000);
+			if(this.state == null) {
+				LOG.fatal("Ehh, we're broke.");
+			}
+
+			LOG.info("Cluster has " + state.getNodesActive() + " nodes active");
+			LOG.info("Cluster has " + state.getNodesDead() + " nodes dead");
+			LOG.info("Nodes in cluster: ");
+			for(InetSocketAddress host : state.getRing().getHosts())
+				LOG.info("Host: " + host.toString());
+
+			/* XXX Temporary, forge a new ring with us in it */
+			HrfsRing newring = HrfsRing.generateRing(
+				state.getRing(),
+				conf.get(HrfsKeys.HRFS_NODE_ADDRESS, "127.0.0.1"),
+				node.getRPCServerPort());
+
+			ClusterState nstate = new ClusterState(
+				state.getNodesActive(),
+				state.getNodesDead(),
+				newring);
+			
+			stserv.setState(nstate);
+		}
+		catch(InterruptedException e) {
+		}
+
 		/* I want to join the cluster */
 		mcserv.join(stserv.getListenerHostAddress(),
-			    stserv.getListenerPort());
+			    stserv.getServerPort());
 	}
 
 	/**
@@ -92,6 +131,9 @@ public class ClusterAgent
 	public void nodeJoin(String host, int port)
 	{
 		stserv.recvState(host, port);
+		LOG.info("NODES IN STATE: ");
+		for(InetSocketAddress addr : state.getRing().getHosts())
+			LOG.info("NODE: " + addr.toString());
 	}
 
 	/**

@@ -81,12 +81,14 @@ public class HrfsNode
 				if(this.server != null)
 					break;
 
+				this.port = this.port + p;
 				this.server = new RPC.Builder(conf).
 					setInstance(this).
 					setProtocol(HrfsRPC.class).
 					setBindAddress(this.addr).
-					setPort(this.port + p).
+					setPort(this.port).
 					build();
+
 			}
 			catch(BindException e) {
 				LOG.warn("Unable to bind server to port: " + (port + p));
@@ -105,10 +107,19 @@ public class HrfsNode
 		}
 
 		/* Build cluster proxy */
-		this.cagent = new ClusterAgent();
+		this.cagent = new ClusterAgent(this);
 
 		/* Start Node Daemons */
 		this.server.start();
+	}
+
+	/**
+	 * Gets the port this hrfs node will accept rpc calls from.
+	 * @return rpc Hadoop RPC server port
+	 */
+	public int getRPCServerPort()
+	{
+		return this.port;
 	}
 
 	/**

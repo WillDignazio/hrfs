@@ -87,14 +87,14 @@ class MulticastServer
 		String[] smsg;
 
 		nbytes = 0;
-		buffer = new byte[MAX_UDP_SIZE];
+		buffer = null;
 		packet = null;
 		smsg = null;
 
 		for(;;) {
-			packet = new DatagramPacket(buffer, buffer.length);
-
 			try {
+				buffer = new byte[MAX_UDP_SIZE];
+				packet = new DatagramPacket(buffer, buffer.length);
 				socket.receive(packet);
 			}
 			catch(IOException e) {
@@ -144,7 +144,6 @@ class MulticastServer
 	{
 		DatagramPacket packet;
 		String out;
-		byte[] buf;
 
 		try {
 			/* XXX Endianness might be a problem */
@@ -167,7 +166,6 @@ class MulticastServer
 	{
 		DatagramPacket packet;
 		String out;
-		byte[] buf;
 
 		try {
 			/* XXX Endianness */
