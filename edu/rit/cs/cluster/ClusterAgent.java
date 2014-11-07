@@ -146,4 +146,12 @@ public class ClusterAgent
 		LOG.info("ClusterAgent received new state: " + state.getTimestamp());
 		this.state = state;
 	}
+
+	/**
+	 * Gets the ring state of the cluster
+	 */
+	public HrfsRing getRing()
+	{
+		return state.getRing();
+	}
 }

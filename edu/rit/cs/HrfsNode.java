@@ -22,7 +22,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import edu.rit.cs.HrfsRing;
 import edu.rit.cs.cluster.ClusterAgent;
 
 public class HrfsNode
@@ -181,6 +180,12 @@ public class HrfsNode
 	public boolean delBlock(String key)
 	{
 		return false;
+	}
+
+	/** Responds with a list of node peers */
+	public ArrayList<InetSocketAddress> getPeers()
+	{
+		return cagent.getRing().getHosts();
 	}
 
 	/**

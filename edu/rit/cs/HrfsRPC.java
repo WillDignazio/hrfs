@@ -4,6 +4,9 @@
  */
 package edu.rit.cs;
 
+import java.util.ArrayList;
+import java.net.InetSocketAddress;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.ProtocolInfo;
@@ -13,6 +16,12 @@ import org.apache.hadoop.ipc.ProtocolInfo;
 @ProtocolInfo(protocolName = "hrfs", protocolVersion = 1)
 public interface HrfsRPC
 {
+	/**
+	 * Get a list of the peers in the node network.
+	 * XXX Probably will get removed.
+	 */
+	ArrayList<InetSocketAddress> getPeers();
+	
 	/**
 	 * Simple ping->pong response that acknowledges the 
 	 * participating node is still active.
