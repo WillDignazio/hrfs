@@ -15,6 +15,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
+import org.apache.commons.lang.SerializationUtils;
 
 import edu.rit.cs.HrfsKeys;
 import edu.rit.cs.HrfsConfiguration;
@@ -66,20 +67,22 @@ public final class HrfsRing
 	public ArrayList<InetSocketAddress> mapKey(String key)
 	{
 		/* XXX Read header note */
-		return hosts;
+		return getHosts();
 	}
 
 	public ArrayList<InetSocketAddress> getHosts()
 	{
-		return this.hosts;
+		/* We need to make a deep copy to preserve immutability */
+		return (ArrayList<InetSocketAddress>)SerializationUtils.
+				clone(this.hosts);
 	}
 
 	/**
 	 * Create a new immutable Ring that contains the given host.
 	 */
-	public static HrfsRing generateRing(HrfsRing ring, String host, int port)
+	public static HrfsRing generateRing(HrfsRing ring, InetSocketAddress address)
 	{
-		return new HrfsRing(ring.getHosts(),
-				    new InetSocketAddress(host, port));
+		return new HrfsRing(ring.getHosts(), address);
+
 	}
 }

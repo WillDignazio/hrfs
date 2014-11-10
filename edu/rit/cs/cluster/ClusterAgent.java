@@ -6,9 +6,6 @@
  * for a group of nodes to make placements and ring adjustments
  * on behalf of a node.
  *
- * This also runs as a seperate server thread within the Node, and
- * acts on a typical multicast group network.
- *
  * @author Will Dignazio <wdignazio@gmail.com>
  * @file ClusterAgent.java
  */
@@ -26,132 +23,168 @@ import org.apache.hadoop.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang.SerializationUtils;
 
-import edu.rit.cs.HrfsRing;
-import edu.rit.cs.HrfsNode;
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.ZooDefs.*;
+
 import edu.rit.cs.HrfsConfiguration;
 import edu.rit.cs.HrfsKeys;
+import edu.rit.cs.HrfsRing;
 
 public class ClusterAgent
-	implements StateListener, MulticastListener
+	extends Thread
+	implements RingListener
 {
 	static
 	{
 		HrfsConfiguration.init();
 	}
 
+	private static final String RING_ZNODE_PATH = "/hrfs-ring";
 	private static final Log LOG = LogFactory.getLog(ClusterAgent.class);
-	private static int THREAD_POOL_SIZE = 5;
 
+	private InetSocketAddress rpcAddr;
 	private HrfsConfiguration conf;
-	private ClusterState state;
-	private	StateServer stserv;
-	private MulticastServer mcserv;
-	private HrfsNode node; /* xxx Bad. */
+	private HrfsRing ring;
+	private ClusterClient client;
+	private ClusterLock lock;
+	private RingMonitor monitor;
+	private ZooKeeper zk;
+
+	/** Helper that processes events to the monitor */
+	private class AgentWatcher
+		implements Watcher {
+		@Override
+		public void process(WatchedEvent event) {
+			monitor.process(event);
+		}
+	}
 
 	/**
-	 * Build the node cluster agent, listen on the configured multicast
-	 * group from Hadoop. This will be the network that the proxy listens
-	 * for cluster anouncements and configuration changes.
+	 * Sets up our connection to the ZooKeeper group, and initiates
+	 * the components that are active in it. This includes the shared
+	 * cluster lock, and the watcher for the cluster ring state.
 	 */
-	public ClusterAgent(HrfsNode node /* XXX Temporary */)
+	public ClusterAgent(ClusterClient client)
+		throws IOException
 	{
-		this.node = node; /* XXX Got to go */
 		this.conf = new HrfsConfiguration();
-		this.stserv = new StateServer(this);
-		this.mcserv = new MulticastServer(this);
+		this.client = client;
 
-		/* Start our subservient daemons */
-		this.mcserv.start();
-		this.stserv.start();
+		/* Setup the ZooKeeper session */
+		this.zk = new ZooKeeper(
+			conf.get(HrfsKeys.HRFS_ZOOKEEPER_ADDRESS, "127.0.0.1"),
+			conf.getInt(HrfsKeys.HRFS_ZOOKEEPER_PORT, 2181),
+			new AgentWatcher());
 
-		/* Configure params */
-		this.state = null;
+		/* For ring addition */
+		this.rpcAddr = new InetSocketAddress(client.getRPCAddress(),
+						     client.getRPCPort());
+		this.lock = new ClusterLock(zk);
+		this.monitor = new RingMonitor(zk, lock, this, RING_ZNODE_PATH);
+	}
 
-		/* Announce presence on network */
-		mcserv.announce(stserv.getListenerHostAddress(),
-				stserv.getListenerPort());
+	/** Handler for ring state changes */
+	@Override
+	public synchronized void ringUpdate(HrfsRing ring)
+	{
+		byte[] buffer;
+		HrfsRing nring;
 
-		/* 
-		 * XXX Needs better way, relies on same socket timeout
-		 * that the state server has.
+		synchronized(this) {
+			this.ring = ring;
+
+			try {
+				/* Just for a moment */
+				lock.lock();
+			
+				if(!this.ring.getHosts().contains(this.rpcAddr)) {
+					LOG.info("Node not present in ring, attempting to join....");
+					
+					/*
+					 * We are going to need to generate a new ring with us in
+					 * it, then publish that ring. We have the lock here, so
+					 * the cluster ring shouldn't change on us.
+					 */
+					try {
+						nring = HrfsRing.generateRing(ring, this.rpcAddr);
+						buffer = SerializationUtils.serialize(nring);
+						zk.setData(RING_ZNODE_PATH, buffer, -1);
+					}
+					catch(KeeperException e) {
+						LOG.error("Unable to join node: " +
+							  e.toString());
+					}
+					catch(InterruptedException e) {
+						LOG.error("Interrupted while joining node" +
+							  e.toString());
+					}
+				}
+
+				lock.unlock();
+			}
+			catch(IOException e) {
+				LOG.error("Failed to update ring with us in it.");
+			}
+		}
+	}
+
+	/** Handler for ring destruction, or invalid zookeeper session */
+	@Override
+	public synchronized void closed(int rc)
+	{
+		LOG.error("ZooKeeper session invalid");
+		notifyAll();
+	}
+
+	/** Handler for needing a new ring state */
+	@Override
+	public void newRing(HrfsRing ring)
+	{
+		HrfsRing newring;
+		byte buffer[];
+		
+		LOG.warn("Cluster ring not initialized.");
+
+		/* Blank new ring (including us) */
+		newring = new HrfsRing();
+		
+		/*
+		 * At this point, we're the first here, and we need to
+		 * create a new ring that represents just us in the cluster.
+		 * We need the cluster lock in case anybody else comes up.
+		 * We also need to watch for getting the lock a hair too late,
+		 * perhaps right after another node tried to create the 
+		 * cluster.
 		 */
 		try {
-			Thread.sleep(10000);
-			if(this.state == null) {
-				LOG.fatal("Ehh, we're broke.");
-			}
+			lock.lock();
 
-			LOG.info("Cluster has " + state.getNodesActive() + " nodes active");
-			LOG.info("Cluster has " + state.getNodesDead() + " nodes dead");
-			LOG.info("Nodes in cluster: ");
-			for(InetSocketAddress host : state.getRing().getHosts())
-				LOG.info("Host: " + host.toString());
+			/* Create a new HrfsRing */
+			buffer = SerializationUtils.serialize(newring);
 
-			/* XXX Temporary, forge a new ring with us in it */
-			HrfsRing newring = HrfsRing.generateRing(
-				state.getRing(),
-				conf.get(HrfsKeys.HRFS_NODE_ADDRESS, "127.0.0.1"),
-				node.getRPCServerPort());
+			zk.create(RING_ZNODE_PATH,
+				  buffer,
+				  Ids.OPEN_ACL_UNSAFE,
+				  CreateMode.PERSISTENT);
 
-			ClusterState nstate = new ClusterState(
-				state.getNodesActive(),
-				state.getNodesDead(),
-				newring);
-			
-			stserv.setState(nstate);
+			LOG.info("Created new ring state");
+			lock.unlock();
 		}
 		catch(InterruptedException e) {
+			LOG.error("Interrupted while creating ring " + e.toString());
+			System.exit(1);
 		}
-
-		/* I want to join the cluster */
-		mcserv.join(stserv.getListenerHostAddress(),
-			    stserv.getServerPort());
-	}
-
-	/**
-	 * Handles when a node has announced itself on the network, and needs to
-	 * be introduced into the cluster.
-	 * @param host Host address of the node.
-	 * @param port Port of the node.
-	 */
-	@Override
-	public void newNode(String host, int port)
-	{
-		stserv.sendState(host, port);
-	}
-
-	/**
-	 * A node is joining the cluster, and we need to fetch a new state from them.
-	 * This state will supposedly be the new state of the cluster.
-	 * @param host Host to receive new state from
-	 * @param port Port to receive new state from
-	 */
-	@Override
-	public void nodeJoin(String host, int port)
-	{
-		stserv.recvState(host, port);
-		LOG.info("NODES IN STATE: ");
-		for(InetSocketAddress addr : state.getRing().getHosts())
-			LOG.info("NODE: " + addr.toString());
-	}
-
-	/**
-	 * Implementation of newState, the State server has received and given us a new
-	 * state for the cluster.
-	 */
-	@Override
-	public void newState(ClusterState state)
-	{
-		LOG.info("ClusterAgent received new state: " + state.getTimestamp());
-		this.state = state;
-	}
-
-	/**
-	 * Gets the ring state of the cluster
-	 */
-	public HrfsRing getRing()
-	{
-		return state.getRing();
+		catch(KeeperException e) {
+			LOG.error("Keeper Failure: Failed to create new ring: " +
+				  e.toString());
+			System.exit(1);
+		}
+		catch(IOException e) {
+			LOG.error("Failed to create new ring: " +
+				  e.toString());
+			System.exit(1);
+		}
 	}
 }

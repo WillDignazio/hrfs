@@ -19,13 +19,17 @@ import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.ipc.RPC;
 
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.ZooDefs.*;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import edu.rit.cs.cluster.ClusterClient;
 import edu.rit.cs.cluster.ClusterAgent;
 
 public class HrfsNode
-	implements HrfsRPC
+	implements HrfsRPC, ClusterClient
 {
 	static
 	{
@@ -39,9 +43,18 @@ public class HrfsNode
 	private LinkedBlockingQueue workq;
 	private HrfsConfiguration conf;
 	private int port;
-	private String addr;
+	private String address;
 	private RPC.Server server;
 	private ClusterAgent cagent;
+
+	/** Internal watch handler that listens for cluster changes. */
+	private class ZooWatcher
+		implements Watcher {
+		@Override
+		public void process(WatchedEvent event) {
+			LOG.info("Connected to ZooKeeper");
+		}
+	}
 
 	/**
 	 * By default, the HRFS Node will immediately use the local hrfs
@@ -64,7 +77,7 @@ public class HrfsNode
 
 		/* Get Configuration Objects */
 		this.port = conf.getInt(HrfsKeys.HRFS_NODE_PORT, 60010);
-		this.addr = conf.get(HrfsKeys.HRFS_NODE_ADDRESS, "0.0.0.0");
+		this.address = conf.get(HrfsKeys.HRFS_NODE_ADDRESS, "0.0.0.0");
 		this.workq = new LinkedBlockingQueue();
 
 		/*
@@ -81,16 +94,18 @@ public class HrfsNode
 					break;
 
 				this.port = this.port + p;
+				LOG.info("Attempting to bind to port: " + port);
+
 				this.server = new RPC.Builder(conf).
 					setInstance(this).
 					setProtocol(HrfsRPC.class).
-					setBindAddress(this.addr).
+					setBindAddress(this.address).
 					setPort(this.port).
 					build();
-
 			}
 			catch(BindException e) {
-				LOG.warn("Unable to bind server to port: " + (port + p));
+				LOG.warn("Unable to bind server to port: " + (port + p) +
+					 e.toString());
 				continue;
 			}
 			catch(Exception e) {
@@ -116,9 +131,20 @@ public class HrfsNode
 	 * Gets the port this hrfs node will accept rpc calls from.
 	 * @return rpc Hadoop RPC server port
 	 */
-	public int getRPCServerPort()
+	@Override
+	public int getRPCPort()
 	{
 		return this.port;
+	}
+
+	/**
+	 * Gets the rpc address of the server for this node.
+	 * @return address RPC address for the node.
+	 */
+	@Override
+	public String getRPCAddress()
+	{
+		return this.address;
 	}
 
 	/**
@@ -180,12 +206,6 @@ public class HrfsNode
 	public boolean delBlock(String key)
 	{
 		return false;
-	}
-
-	/** Responds with a list of node peers */
-	public ArrayList<InetSocketAddress> getPeers()
-	{
-		return cagent.getRing().getHosts();
 	}
 
 	/**

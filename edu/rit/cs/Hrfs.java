@@ -9,6 +9,7 @@ package edu.rit.cs;
 
 import java.io.*;
 import java.util.*;
+import java.net.*;
 
 import java.net.URISyntaxException;
 import java.net.URI;
@@ -22,6 +23,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
+import org.apache.hadoop.ipc.RPC;
+
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.ZooDefs.*;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.*;
@@ -39,17 +44,54 @@ public class Hrfs extends FileSystem
 	}
 
 	private static final Log LOG = LogFactory.getLog(Hrfs.class);
-
 	private HrfsConfiguration conf;
+	private InetSocketAddress naddr;
+	private ZooKeeper zk;
+	private HrfsSession session;
+	private HrfsRPC nrpc;
 
+	/** Internal watch handler that listens for cluster changes. */
+	private class ZooWatcher
+		implements Watcher {
+		@Override
+		public void process(WatchedEvent event) {
+			LOG.info("Connected to ZooKeeper");
+		}
+	}
+	
 	/**
 	 * Default configuration, stub.
 	 */
 	public Hrfs()
 	{
-		conf = new HrfsConfiguration();
-	}
+		try {
+			this.conf = new HrfsConfiguration();
+			this.naddr = new InetSocketAddress(
+				conf.get(HrfsKeys.HRFS_NODE_ADDRESS, "127.0.0.1"),
+				conf.getInt(HrfsKeys.HRFS_NODE_PORT, 60010));
 
+			this.nrpc = RPC.getProxy(HrfsRPC.class,
+					    RPC.getProtocolVersion(HrfsRPC.class),
+					    naddr, conf);
+
+			/* Setup the ZooKeeper session */
+			this.zk = new ZooKeeper(
+				conf.get(HrfsKeys.HRFS_ZOOKEEPER_ADDRESS, "127.0.0.1"),
+				conf.getInt(HrfsKeys.HRFS_ZOOKEEPER_PORT, 2181),
+				new ZooWatcher());
+			
+			/* Build client session */
+			this.session = new HrfsSession(zk);
+			
+			LOG.info("Finished initializing hrfs connection.");
+		}
+		catch(IOException e) {
+			LOG.error("Failed to instantiate hrfs connection: " +
+				  e.toString());
+			System.exit(1); // Just stop here
+		}
+	}
+	
 	/**
 	 * Get configuration scheme, generally hrfs://
 	 */
@@ -74,7 +116,11 @@ public class Hrfs extends FileSystem
 	public boolean mkdirs(Path p, FsPermission permission) { return false; };
 
 	@Override
-	public Path getWorkingDirectory() { return null; }
+	public Path getWorkingDirectory()
+	{
+		Path path;
+		return new Path(this.session.getWorkingDirectory());
+	}
 
 	@Override
 	public void setWorkingDirectory(Path p) { }

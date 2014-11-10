@@ -17,12 +17,6 @@ import org.apache.hadoop.ipc.ProtocolInfo;
 public interface HrfsRPC
 {
 	/**
-	 * Get a list of the peers in the node network.
-	 * XXX Probably will get removed.
-	 */
-	ArrayList<InetSocketAddress> getPeers();
-	
-	/**
 	 * Simple ping->pong response that acknowledges the 
 	 * participating node is still active.
 	 *

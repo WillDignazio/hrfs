@@ -21,9 +21,7 @@ public class HrfsClient
 	{
 		FileSystem fs;
 		HrfsConfiguration conf;
-		HrfsWriter writer;
 		InetSocketAddress addr;
-		HrfsRPC rpc;
 
 		if(args.length != 1) {
 			System.err.println("Usage: hadoop jar hrfs.jar edu.cs.rit.HrfsClient <file>");
@@ -31,14 +29,6 @@ public class HrfsClient
 		}
 		
 		conf = new HrfsConfiguration();
-		addr = new InetSocketAddress(conf.get(HrfsKeys.HRFS_NODE_ADDRESS, "127.0.0.1"),
-				       conf.getInt(HrfsKeys.HRFS_NODE_PORT, 60010));
-		
-		rpc = RPC.getProxy(HrfsRPC.class,
-					   RPC.getProtocolVersion(HrfsRPC.class),
-					   addr, conf);
-
-		writer = new HrfsWriter(args[0], rpc);
-		writer.publish();
+		fs = new Hrfs();
 	}
 }

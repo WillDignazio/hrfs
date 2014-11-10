@@ -4,20 +4,20 @@
 .PHONY: all clean src
 
 CLASSPATH=$(shell hadoop classpath)
-JAVAC=javac #hadoop com.sun.tools.javac.Main
+JAVAC=javac -Xlint #hadoop com.sun.tools.javac.Main
 JARC=jar
 
 JAR=	hrfs.jar
 JSRC=	edu/rit/cs/cluster/ClusterAgent.java	\
-	edu/rit/cs/cluster/ClusterState.java	\
-	edu/rit/cs/cluster/StateServer.java	\
-	edu/rit/cs/cluster/MulticastServer.java	\
+	edu/rit/cs/cluster/ClusterLock.java	\
+	edu/rit/cs/cluster/RingMonitor.java	\
 	edu/rit/cs/Hrfs.java			\
 	edu/rit/cs/HrfsConfiguration.java	\
 	edu/rit/cs/HrfsKeys.java		\
 	edu/rit/cs/HrfsNode.java		\
 	edu/rit/cs/HrfsRPC.java			\
 	edu/rit/cs/HrfsRing.java		\
+	edu/rit/cs/HrfsSession.java		\
 	edu/rit/cs/HrfsWriter.java		\
 	edu/rit/cs/NodeWriter.java		\
 	edu/rit/cs/MetadataBlock.java		\
