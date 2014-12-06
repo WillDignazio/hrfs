@@ -81,31 +81,23 @@ public class NodeWriter
 		return formatter.toString();
 	}
 
-	@Override
-	public synchronized void write(char[] cbuf, int off, int len)
-		throws AccessDeniedException, IOException
+	private synchronized void _writeByteBuffer(byte[] buffer, int off, int len)
+		throws IOException, AccessDeniedException
 	{
-		byte[] bytes;
-
 		try {
-			bytes = new String(cbuf).getBytes();
-			this.sha1 = getSHA1(bytes);
-			
-			/* XXX This won't hold up to time */
+			this.sha1 = getSHA1(buffer);
 			file = new File(this.path + "/" + this.sha1);
 
-			/* Our blocks are immutable */
 			if(this.file.exists())
 				throw new AccessDeniedException("Blocks cannot be modified.");
 
-			/* XXX Possible race condition */
 			file.createNewFile();
 			fos = new FileOutputStream(file, false);
 
 			/* Make sure we're not allowing reads yet */
 			lock = fos.getChannel().lock();
 			try {
-				fos.write(bytes, off, len);
+				fos.write(buffer, off, len);
 				fos.flush();
 				this.placed = true;
 			}
@@ -119,6 +111,40 @@ public class NodeWriter
 		}
 	}
 
+	/**
+	 * Take a raw byte buffer and use it to a block of data to disk.
+	 * This is identical to the char[] variant, but doesn't convert
+	 * the data in the array.
+	 * @param buf Byte buffer of the block.
+	 * @param off Offset within the given buffer
+	 * @param len Length to write to diskn
+	 */
+	public synchronized void write(byte[] buf, int off, int len)
+		throws AccessDeniedException, IOException
+	{
+		this._writeByteBuffer(buf, off, len);
+	}
+
+	/**
+	 * Implementation of write for the writer, takes a character
+	 * array and writes it to disk.
+	 * @param cbuf Character buffer to write to disk
+	 * @param off Offset within buffer
+	 * @param len Length to write to disk
+	 */
+	@Override
+	public synchronized void write(char[] cbuf, int off, int len)
+		throws AccessDeniedException, IOException
+	{
+		byte[] bytes;
+		bytes = new String(cbuf).getBytes();
+		this._writeByteBuffer(bytes, off, len);
+	}
+
+	/**
+	 * Impelmentation of close for the writer, closes the
+	 * stream to disk.
+	 */
 	@Override
 	public void close()
 		throws IOException
@@ -127,6 +153,10 @@ public class NodeWriter
 			fos.close();
 	}
 
+	/**
+	 * Implementation of flush, makes sure that data has been
+	 * written to disk.
+	 */
 	@Override
 	public void flush()
 		throws IOException
