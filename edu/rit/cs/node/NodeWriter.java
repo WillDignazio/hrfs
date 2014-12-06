@@ -2,7 +2,7 @@
  * Copyright © 2014
  * Hadoop Replicating Filesystem Node Writer
  *
- * This is the nodes writer to the underlying filesystem storage
+ * This is the node writer to the underlying filesystem storage
  * device. This writer currently assumes there is an underlying
  * filesystem that will support the creation and editing of files.
  */
@@ -43,10 +43,6 @@ public class NodeWriter
 
 		this.path = basedir;
 		fpath = new File(path);
-
-		this.file = null;
-		this.fos = null;
-		this.lock = null;
 
 		/* Check that the data dir exists */
 		if(!fpath.exists() || !fpath.isDirectory())
