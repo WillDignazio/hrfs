@@ -142,14 +142,7 @@ public class Hrfs extends FileSystem
 		throws IOException { return null; }
 
 	public FSDataOutputStream create(Path f)
-	{
-		MetadataBlock mblk;
-
-		/* Create empty block */
-		mblk = new MetadataBlock(f.toString());
-
-		return null;
-	}
+	{ return null; }
 
 	@Override
 	public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite, 

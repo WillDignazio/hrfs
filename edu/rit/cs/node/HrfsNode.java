@@ -5,7 +5,7 @@
  * @file HrfsNode.java
  * @author Will Dignazio <wdignazio@gmail.com>
  */
-package edu.rit.cs;
+package edu.rit.cs.node;
 
 import java.io.*;
 import java.net.*;
@@ -25,8 +25,11 @@ import org.apache.zookeeper.ZooDefs.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import edu.rit.cs.cluster.ClusterClient;
+import edu.rit.cs.HrfsRPC;
+import edu.rit.cs.HrfsKeys;
+import edu.rit.cs.HrfsConfiguration;
 import edu.rit.cs.cluster.ClusterAgent;
+import edu.rit.cs.cluster.ClusterClient;
 
 public class HrfsNode
 	implements HrfsRPC, ClusterClient

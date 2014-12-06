@@ -1,8 +1,12 @@
 /**
  * Copyright © 2014
  * Hadoop Replicating Filesystem Node Writer
+ *
+ * This is the nodes writer to the underlying filesystem storage
+ * device. This writer currently assumes there is an underlying
+ * filesystem that will support the creation and editing of files.
  */
-package edu.rit.cs;
+package edu.rit.cs.node;
 
 import java.io.IOException;
 import java.io.FileNotFoundException;
