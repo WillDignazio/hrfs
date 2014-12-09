@@ -4,7 +4,7 @@
 .PHONY: all clean src
 
 CLASSPATH=$(shell hadoop classpath)
-JAVAC=javac -Xlint #hadoop com.sun.tools.javac.Main
+JAVAC=javac #hadoop com.sun.tools.javac.Main
 JARC=jar
 
 JAR=	hrfs.jar
@@ -15,23 +15,25 @@ JSRC=	edu/rit/cs/HrfsConfiguration.java	\
 	edu/rit/cs/HrfsSession.java		\
 	edu/rit/cs/Hrfs.java			\
 	edu/rit/cs/cluster/ClusterLock.java	\
-	edu/rit/cs/cluster/RingMonitor.java	\
+	edu/rit/cs/cluster/ClusterClient.java	\
 	edu/rit/cs/cluster/ClusterAgent.java	\
+	edu/rit/cs/cluster/RingListener.java	\
+	edu/rit/cs/cluster/RingMonitor.java	\
 	edu/rit/cs/node/NodeWriter.java		\
 	edu/rit/cs/node/HrfsNode.java		\
 	edu/rit/cs/examples/HrfsClient.java	\
 	edu/rit/cs/examples/HrfsNodeClient.java	\
 
-JCLASS=	$(JSRC:.java=.class)		\
-	edu/rit/cs/*.class		\
-	edu/rit/cs/cluster/*.class	\
-	edu/rit/cs/examples/*.class	\
+JCLASS=	$(JSRC:.java=.class)
 
 %.class: %.java
 	$(JAVAC) -classpath $(CLASSPATH):. $<
 
 all: $(JCLASS)
-	$(JARC) -cvf $(JAR) $(JCLASS)
+	$(JARC) -cvf $(JAR) 	edu/rit/cs/*.class \
+				edu/rit/cs/cluster/*.class \
+				edu/rit/cs/node/*.class \
+				edu/rit/cs/examples/*.class
 
 clean:
 	rm -f $(JCLASS)

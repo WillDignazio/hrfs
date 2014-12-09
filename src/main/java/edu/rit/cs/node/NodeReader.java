@@ -7,8 +7,10 @@
  * the data written by the NodeWriter.
  *
  */
-import edu.rit.cs.node;
+package edu.rit.cs.node;
 
+import java.io.FileNotFoundException;
+import java.io.File;
 import java.io.Reader;
 
 public class NodeReader
@@ -28,6 +30,4 @@ public class NodeReader
 		if(!fpath.exists() || !fpath.isDirectory())
 			throw new FileNotFoundException("Base directory does not exist");
 	}
-
-	
 }
