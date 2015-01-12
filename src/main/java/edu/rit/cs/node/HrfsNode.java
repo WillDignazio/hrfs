@@ -50,15 +50,6 @@ public class HrfsNode
 	private RPC.Server server;
 	private ClusterAgent cagent;
 
-	/** Internal watch handler that listens for cluster changes. */
-	private class ZooWatcher
-		implements Watcher {
-		@Override
-		public void process(WatchedEvent event) {
-			LOG.info("Connected to ZooKeeper");
-		}
-	}
-
 	/**
 	 * By default, the HRFS Node will immediately use the local hrfs
 	 * configuration to establish a listening socket. The HrfsNode uses
