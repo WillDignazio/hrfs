@@ -76,12 +76,16 @@ public class HrfsDisk
 		this.file = new RandomAccessFile(path.toFile(), "rw");
 		this.fchannel = file.getChannel();
 
-		double appx = (file.length() / DATA_BLOCK_SIZE);
-		this.mextCount = ((appx % (double)METADATA_EXTENT_SIZE) == 0) ?
-			(int)Math.ceil(appx) :
-			(int)appx;
+		/*
+		 * This gives us the amount of data blocks that can be present in the
+		 * disk. This will will be less as the reserved metadata section will consume
+		 * some, but gives us a rough idea of how much space we need.
+		 */
+		double appx = ((double)file.length() / (double)DATA_BLOCK_SIZE);
 
-		this.mextCount /= METADATA_EXTENT_SIZE;
+		/* Then we find how many extents are going to cover the blocks */
+		double nmblks = (double)METADATA_EXTENT_SIZE / (double)METADATA_BLOCK_SIZE;
+		this.mextCount = (int)Math.ceil(appx / nmblks);
 		if(this.mextCount == 0)
 			++mextCount;
 	}
@@ -103,7 +107,7 @@ public class HrfsDisk
 				   exaddr,
 				   exaddr + METADATA_EXTENT_SIZE);
 
-		ext = new MetadataExtent(mbuf, exn);
+		ext = new MetadataExtent(mbuf.duplicate(), exn);
 		return ext;
 	}
 
@@ -131,9 +135,5 @@ public class HrfsDisk
 
 		disk = new HrfsDisk(Paths.get("test"));
 		disk.format();
-
-		System.out.println("yo");
-		System.out.println(Paths.get("."));
-		System.out.println(disk.getMetadataExtentCount());
 	}
 }

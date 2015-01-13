@@ -1,12 +1,21 @@
+/**
+ * Copyright © 2015
+ * Hadoop Replicating File System
+ *
+ * A MetadataExtent is an in memory reference to a memory map of
+ * a buffer that contains metadata information. This can be broken
+ * down into blocks that can be used to modify the exact information
+ * on disk.
+ */
 package edu.rit.cs.disk;
 
-import java.nio.MappedByteBuffer;
+import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
 class MetadataExtent
 {
 	private LinkedList<MetadataBlock> mblocks;
-	private MappedByteBuffer mbuf;
+	private ByteBuffer mbuf;
 	private long exn;
 
 	/**
@@ -15,7 +24,7 @@ class MetadataExtent
 	 * @param buf Mapped buffer region.
 	 * @param exn Extent number on disk
 	 */
-	public MetadataExtent(MappedByteBuffer mbufp, int exn)
+	public MetadataExtent(ByteBuffer mbuf, int exn)
 	{
 		this.mbuf = mbuf;
 		this.exn = exn;
@@ -29,7 +38,7 @@ class MetadataExtent
 			 * provide them the buffer so they have direct access to
 			 * the mapped memorry.
 			 */
-			mblocks.add(new MetadataBlock(mbuf, mblk));
+			mblocks.add(new MetadataBlock(mbuf.duplicate(), mblk));
 		}
 	}
 
@@ -42,8 +51,7 @@ class MetadataExtent
 		byte[] zbuf;
 
 		zbuf = new byte[HrfsDisk.METADATA_KEY_SIZE];
-		for(MetadataBlock mblock : this.mblocks)
-		{
+		for(MetadataBlock mblock : this.mblocks) {
 			mblock.setKey(zbuf);
 			mblock.setDataLocation(0);
 		}

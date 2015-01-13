@@ -1,12 +1,21 @@
+/**
+ * Copyright © 2015
+ * Hadoop Replicating File System
+ *
+ * Smallest metadata object, a block within a metadata extent, is
+ * an in memory representation of the mapped memory on disk. This
+ * is used to provide an interface to metadata values, and information
+ * about where data lies.
+ */
 package edu.rit.cs.disk;
 
 import java.util.Arrays;
-import java.nio.MappedByteBuffer;
+import java.nio.ByteBuffer;
 import java.nio.ByteBuffer;
 
 class MetadataBlock
 {
-	private MappedByteBuffer mbuf;
+	private ByteBuffer mbuf;
 	private int mxn;
 	private int offset;
 
@@ -17,7 +26,7 @@ class MetadataBlock
 	 * @param mbuf Parent byte buffer
 	 * @param mxn Metadata block number
 	 */
-	public MetadataBlock(MappedByteBuffer mbuf, int mxn)
+	public MetadataBlock(ByteBuffer mbuf, int mxn)
 	{
 		this.mbuf = mbuf;
 		this.mxn = mxn;
@@ -45,29 +54,29 @@ class MetadataBlock
 	 * Set the key for the metadata block.
 	 * @param key Key for metadata block
 	 */
-	public boolean setKey(byte[] key)
+	public void setKey(byte[] key)
 	{
 		this.mbuf.put(key,
 			      0,
 			      HrfsDisk.METADATA_KEY_SIZE);
-		return true;
 	}
 
 	/**
 	 * Set the location pointer to the specified value.
-	 * @param loc Location on disk.
+	 * @param locptr Location on disk.
 	 */
-	public void setDataLocation(long loc)
+	public void setDataLocation(long locptr)
 	{
-		ByteBuffer buffer;
-		byte[] odata;
+		this.mbuf.putLong(HrfsDisk.METADATA_KEY_SIZE,
+				  locptr);
+	}
 
-		buffer = ByteBuffer.allocate(Long.SIZE / Byte.SIZE);
-		odata = buffer.putLong(loc).array();
-
-		System.out.println(odata.length);
-		this.mbuf.put(odata,
-			      HrfsDisk.METADATA_KEY_SIZE+1,
-			      odata.length);
+	/**
+	 * Get the location pointer to the specified value.
+	 * @return locptr Pointer to location within disk
+	 */
+	public long getDataLocation()
+	{
+		return this.mbuf.getLong(HrfsDisk.METADATA_KEY_SIZE);
 	}
 }
