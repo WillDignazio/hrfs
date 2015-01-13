@@ -34,6 +34,20 @@ class MetadataBlock
 	}
 
 	/**
+	 * If the metadata block has a non-zero'd key, we consider it
+	 * to be unallocated, or unused.
+	 * @return allocated Whether the block has been allocated.
+	 */
+	public boolean isAllocated()
+	{
+		for(int b=0; b < HrfsDisk.METADATA_KEY_SIZE; ++b)
+			if(mbuf.get(b) != 0)
+				return true;
+
+		return false;
+	}
+
+	/**
 	 * Get the key for the metadata block, this is used to navigate
 	 * the tree, and determine the location of a block of data.
 	 * 

@@ -14,7 +14,8 @@ import java.util.LinkedList;
 
 class MetadataExtent
 {
-	private LinkedList<MetadataBlock> mblocks;
+	private LinkedList<MetadataBlock> freeBlocks;
+	private LinkedList<MetadataBlock> usedBlocks;
 	private ByteBuffer mbuf;
 	private long exn;
 
@@ -29,17 +30,65 @@ class MetadataExtent
 		this.mbuf = mbuf;
 		this.exn = exn;
 
-		mblocks = new LinkedList<MetadataBlock>();
+		freeBlocks = new LinkedList<MetadataBlock>();
+		usedBlocks = new LinkedList<MetadataBlock>();
+
 		for(int mblk=0;
 		    mblk < (HrfsDisk.METADATA_EXTENT_SIZE / HrfsDisk.METADATA_BLOCK_SIZE);
 		    mblk++) {
-			/* 
-			 * Create the metadata block in memory representations,
-			 * provide them the buffer so they have direct access to
-			 * the mapped memorry.
-			 */
-			mblocks.add(new MetadataBlock(mbuf.duplicate(), mblk));
+			MetadataBlock blk;
+
+			blk = new MetadataBlock(mbuf.duplicate(), mblk);
+			if(blk.isAllocated())
+				usedBlocks.add(blk);
+			else
+				freeBlocks.add(blk);
 		}
+	}
+
+	/**
+	 * Allocate a block from within the extent, this will reduce the
+	 * of free blocks by 1, and increase the amount of used blocks
+	 * by 1. If there are no more blocks within the extent, null shall
+	 * be returned.
+	 *
+	 * XXX Need to throw out of blocks exceptions
+	 * @return block New metadata block
+	 */
+	public MetadataBlock allocateMetadataBlock()
+	{
+		MetadataBlock block;
+		byte[] nbuf;
+
+		if(usedBlocks.size() == 0)
+			return null;
+
+		/* Mark it as a dummy value */
+		nbuf = new byte[HrfsDisk.METADATA_KEY_SIZE];
+		nbuf[nbuf.length-1] = 0xF;
+
+		block = usedBlocks.remove(0);
+		block.setKey(nbuf);
+
+		return block;
+	}
+
+	/**
+	 * Get the number of free blocks in the extent.
+	 * @return blocks Number of free metadata blocks
+	 */
+	public int freeBlockCount()
+	{
+		return this.freeBlocks.size();
+	}
+
+	/**
+	 * Get the number of used blocks in the extent.
+	 * @return used Number of used metadata blocks.
+	 */
+	public int usedBlockCount()
+	{
+		return this.usedBlocks.size();
 	}
 
 	/**
@@ -51,10 +100,16 @@ class MetadataExtent
 		byte[] zbuf;
 
 		zbuf = new byte[HrfsDisk.METADATA_KEY_SIZE];
-		for(MetadataBlock mblock : this.mblocks) {
+		
+		/*
+		 * XXX Warning
+		 * This does the 'quick' format of the metadata
+		 * blocks. We assume that a block can be allocated
+		 * if the key is zero'd and that the other values
+		 * within it are invalid.
+		 */
+		for(MetadataBlock mblock : this.usedBlocks)
 			mblock.setKey(zbuf);
-			mblock.setDataLocation(0);
-		}
 	}
 
 	/**
@@ -63,6 +118,6 @@ class MetadataExtent
 	 */
 	public LinkedList<MetadataBlock> getMetadataBlocks()
 	{
-		return this.mblocks;
+		return this.usedBlocks;
 	}
 }
