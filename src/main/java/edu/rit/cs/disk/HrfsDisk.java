@@ -121,6 +121,12 @@ public class HrfsDisk
 		return mextCount;
 	}
 
+	/**
+	 * Formats the disk to have no known data blocks, this effectively
+	 * erases the content on disk.
+	 *
+	 * NOTE: This does _not_ zero all data on the disk.
+	 */
 	public void format()
 		throws IOException
 	{
