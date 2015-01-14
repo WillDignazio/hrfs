@@ -74,5 +74,7 @@ public class DiskTest
 		// 10mb test file
 		fname = createRandomTestFile(1024*1024*10, "rw");
 		hdisk = new HrfsDisk(Paths.get(fname));
+
+		new File(fname).delete();
 	}
 }
