@@ -15,6 +15,12 @@ import java.nio.ByteBuffer;
 
 class MetadataBlock
 {
+	private static final int KEY_OFFSET = 0;
+	private static final int LOCATION_OFFSET = HrfsDisk.METADATA_KEY_SIZE;
+	private static final int NEXT_OFFSET = LOCATION_OFFSET + (Long.SIZE / Byte.SIZE);
+	private static final int LEFT_OFFSET = NEXT_OFFSET + (Long.SIZE / Byte.SIZE);
+	private static final int RIGHT_OFFSET = LEFT_OFFSET + (Long.SIZE / Byte.SIZE);
+	
 	private ByteBuffer mbuf;
 	private int mxn;
 	private int offset;
@@ -58,9 +64,8 @@ class MetadataBlock
 	{
 		byte[] cregion;
 
-		cregion = Arrays.copyOfRange(this.mbuf.array(),
-					     offset,
-					     offset +  HrfsDisk.METADATA_BLOCK_SIZE);
+		cregion = Arrays.copyOfRange(this.mbuf.array(), offset,
+					     offset + KEY_OFFSET);
 		return cregion;
 	}
 
@@ -70,27 +75,85 @@ class MetadataBlock
 	 */
 	public void setKey(byte[] key)
 	{
-		this.mbuf.put(key,
-			      0,
-			      HrfsDisk.METADATA_KEY_SIZE);
+		for(int b=0; b < HrfsDisk.METADATA_KEY_SIZE; ++b)
+			this.mbuf.put(offset+KEY_OFFSET+b, key[b]);
 	}
 
 	/**
 	 * Set the location pointer to the specified value.
 	 * @param locptr Location on disk.
 	 */
-	public void setDataLocation(long locptr)
+	public void setDataBlockLocation(long locptr)
 	{
-		this.mbuf.putLong(HrfsDisk.METADATA_KEY_SIZE,
-				  locptr);
+		this.mbuf.putLong(offset + LOCATION_OFFSET, locptr);
 	}
 
 	/**
 	 * Get the location pointer to the specified value.
 	 * @return locptr Pointer to location within disk
 	 */
-	public long getDataLocation()
+	public long getDataBlockLocation()
 	{
-		return this.mbuf.getLong(HrfsDisk.METADATA_KEY_SIZE);
+		return this.mbuf.getLong(offset + LOCATION_OFFSET);
+	}
+
+	/**
+	 * Set the next pointer for a metadata block on disk, this must
+	 * be the location of the first byte of the next metadata block.
+	 * @param ptr Location on disk
+	 */
+	public void setNextBlockLocation(long ptr)
+	{
+		this.mbuf.putLong(offset + NEXT_OFFSET, ptr);
+	}
+
+	/**
+	 * Get the next pointer for a metadata block on disk, this must
+	 * be translated into a metadata block for use.
+	 * @return ptr Location disk.
+	 */
+	public long getNextBlockLocation()
+	{
+		return this.mbuf.getLong(offset + NEXT_OFFSET);
+	}
+
+	/**
+	 * Set the left pointer for a metadata block on disk, this must be
+	 * the location of the first byte of the left metadata block.
+	 * @param ptr Location on disk
+	 */
+	public void setLeftBlockLocation(long ptr)
+	{
+		this.mbuf.putLong(offset + LEFT_OFFSET, ptr);
+	}
+
+	/**
+	 * Get the left pointer for a metadata block on disk, this must
+	 * be translated into a metadata block for use.
+	 * @return ptr Location on disk.
+	 */
+	public long getLeftBlockLocation()
+	{
+		return this.mbuf.getLong(offset + LEFT_OFFSET);
+	}
+
+	/**
+	 * Set the right pointer for a metadata block on disk, this must be
+	 * the location of the first byte of the right metadata block.
+	 * @param ptr Location on disk
+	 */
+	public void setRightBlockLocation(long ptr)
+	{
+		this.mbuf.putLong(offset + RIGHT_OFFSET, ptr);
+	}
+	
+	/**
+	 * Get the right pointer for a metadata block on disk, this must
+	 * must be translated into a metadata block for use.
+	 * @return ptr Location on disk.
+	 */
+	public long getRightBlockLocation()
+	{
+		return this.mbuf.getLong(offset + RIGHT_OFFSET);
 	}
 }

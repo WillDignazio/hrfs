@@ -9,11 +9,12 @@
  * On Disk Data Format:
  *
  * Disk:
- *
- * +--------------------------------------------------+
- * | Metadata |              Data		      |
- * +--------------------------------------------------+
- *      |                     |
+ *  Superblock
+ *   |
+ * +--+--------------------------------------------------+
+ * |  | Metadata |              Data		         |
+ * +--+--------------------------------------------------+
+ * 0    |                     |
  *      |           +-----------------------------+
  *      |           | DataBlock | DataBlock | ... |
  *      |           +-----------------------------+
@@ -50,6 +51,7 @@ import java.io.IOException;
 
 public class HrfsDisk
 {
+	public static final int SUPERBLOCK_SIZE		= 4096;
 	public static final int METADATA_EXTENT_SIZE	= 4096;
 	public static final int METADATA_KEY_SIZE	= 20;
 	public static final int METADATA_BLOCK_SIZE	= 64;
@@ -104,8 +106,8 @@ public class HrfsDisk
 
 		exaddr = METADATA_EXTENT_SIZE * exn;
 		mbuf = fchannel.map(FileChannel.MapMode.READ_WRITE,
-				   exaddr,
-				   exaddr + METADATA_EXTENT_SIZE);
+				    exaddr,
+				    exaddr + METADATA_EXTENT_SIZE).load();
 
 		ext = new MetadataExtent(mbuf.duplicate(), exn);
 		return ext;

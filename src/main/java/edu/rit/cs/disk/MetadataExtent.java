@@ -32,7 +32,7 @@ class MetadataExtent
 
 		freeBlocks = new LinkedList<MetadataBlock>();
 		usedBlocks = new LinkedList<MetadataBlock>();
-
+		
 		for(int mblk=0;
 		    mblk < (HrfsDisk.METADATA_EXTENT_SIZE / HrfsDisk.METADATA_BLOCK_SIZE);
 		    mblk++) {
@@ -45,7 +45,7 @@ class MetadataExtent
 				freeBlocks.add(blk);
 		}
 	}
-
+	
 	/**
 	 * Allocate a block from within the extent, this will reduce the
 	 * of free blocks by 1, and increase the amount of used blocks
@@ -108,8 +108,13 @@ class MetadataExtent
 		 * if the key is zero'd and that the other values
 		 * within it are invalid.
 		 */
-		for(MetadataBlock mblock : this.usedBlocks)
+		for(MetadataBlock mblock : this.usedBlocks) {
 			mblock.setKey(zbuf);
+			mblock.setDataBlockLocation(0);
+			mblock.setNextBlockLocation(0);
+			mblock.setLeftBlockLocation(0);
+			mblock.setRightBlockLocation(0);
+		}
 	}
 
 	/**
