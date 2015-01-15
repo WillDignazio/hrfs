@@ -50,6 +50,7 @@ import java.io.RandomAccessFile;
 import java.io.IOException;
 
 public class HrfsDisk
+	implements HrfsBlockStore
 {
 	public static final int SUPERBLOCK_SIZE		= 4096;
 	public static final int METADATA_EXTENT_SIZE	= 4096;
@@ -62,6 +63,8 @@ public class HrfsDisk
 	private FileChannel fchannel;
 	private int mextCount;
 	private long dataOffset;
+
+	private SuperBlock sb;
 	
 	/**
 	 * Build a Disk object for the filesystem, this will be the interface
@@ -78,12 +81,16 @@ public class HrfsDisk
 		this.file = new RandomAccessFile(path.toFile(), "rw");
 		this.fchannel = file.getChannel();
 
+		/* XXX must come after building channel + file obj */
+		this.sb = getSuperBlock();
+		
 		/*
 		 * This gives us the amount of data blocks that can be present in the
-		 * disk. This will will be less as the reserved metadata section will consume
-		 * some, but gives us a rough idea of how much space we need.
+		 * disk. This will will be less as the reserved metadata section will
+		 * consume some, but gives us a rough idea of how much space we need.
 		 */
-		double appx = ((double)file.length() / (double)DATA_BLOCK_SIZE);
+		double appx = (((double)file.length() - SUPERBLOCK_SIZE)
+			       / (double)DATA_BLOCK_SIZE);
 
 		/* Then we find how many extents are going to cover the blocks */
 		double nmblks = (double)METADATA_EXTENT_SIZE / (double)METADATA_BLOCK_SIZE;
@@ -92,6 +99,23 @@ public class HrfsDisk
 			++mextCount;
 	}
 
+	/**
+	 * Gets the superblock of the on disk structure.
+	 */
+	private SuperBlock getSuperBlock()
+		throws IOException
+	{
+		MappedByteBuffer mbuf;
+		SuperBlock sblock;
+
+		mbuf = fchannel.map(FileChannel.MapMode.READ_WRITE,
+				    0,
+				    SUPERBLOCK_SIZE).load();
+
+		sblock = new SuperBlock(mbuf);
+		return sblock;
+	}
+	
 	/**
 	 * Retrieve a mapping to the numeric extent given to the method.
 	 * @param exn Extent number
@@ -106,7 +130,7 @@ public class HrfsDisk
 
 		exaddr = METADATA_EXTENT_SIZE * exn;
 		mbuf = fchannel.map(FileChannel.MapMode.READ_WRITE,
-				    exaddr,
+				    exaddr + SUPERBLOCK_SIZE,
 				    exaddr + METADATA_EXTENT_SIZE).load();
 
 		ext = new MetadataExtent(mbuf.duplicate(), exn);
@@ -129,13 +153,53 @@ public class HrfsDisk
 	 *
 	 * NOTE: This does _not_ zero all data on the disk.
 	 */
+	@Override
 	public void format()
 		throws IOException
 	{
+		SuperBlock sblock;
+
+		sblock = getSuperBlock();
+		sblock.erase();
+
 		for(int mext=0; mext < getMetadataExtentCount(); ++mext)
 			getMetadataExtent(mext).erase();
 	}
 
+	/**
+	 * Inserts a block of data into the on disk storage.
+	 * @param key Key of block
+	 * @param blk Block of data
+	 * @return success Whether insertion was successful
+	 */
+	public boolean insert(byte[] key, byte[] data)
+		throws IOException
+	{
+		return false;
+	}
+
+	/**
+	 * Gets a block of data from the on disk storage.
+	 * @param key Key for block of data.
+	 * @return data Block of data.
+	 */
+	public byte[] get(byte[] key)
+		throws IOException
+	{
+		return new byte[1];
+	}
+
+	/**
+	 * Removes a block of data from the on disk storage.
+	 * @param key Key of block
+	 * @return Whether removal was successful
+	 */
+	public boolean remove(byte[] key)
+		throws IOException
+	{
+		return false;
+	}
+	
 	public static void main(String[] args)
 		throws Exception
 	{
