@@ -63,13 +63,9 @@ class MetadataExtent
 		if(usedBlocks.size() == 0)
 			return null;
 
-		/* Mark it as a dummy value */
-		nbuf = new byte[HrfsDisk.METADATA_KEY_SIZE];
-		nbuf[nbuf.length-1] = 0xF;
-
-		block = usedBlocks.remove(0);
-		block.setKey(nbuf);
-
+		block = freeBlocks.remove(0);
+		usedBlocks.add(block);
+		
 		return block;
 	}
 

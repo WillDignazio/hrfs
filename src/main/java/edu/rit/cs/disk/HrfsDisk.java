@@ -38,6 +38,7 @@
  */
 package edu.rit.cs.disk;
 
+import java.util.Random;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
@@ -101,6 +102,7 @@ public class HrfsDisk
 
 	/**
 	 * Gets the superblock of the on disk structure.
+	 * @return sblock Superblock of the on disk structure.
 	 */
 	private SuperBlock getSuperBlock()
 		throws IOException
@@ -164,6 +166,8 @@ public class HrfsDisk
 
 		for(int mext=0; mext < getMetadataExtentCount(); ++mext)
 			getMetadataExtent(mext).erase();
+
+		sblock.setMagic(SuperBlock.SUPER_MAGIC);
 	}
 
 	/**
@@ -172,9 +176,31 @@ public class HrfsDisk
 	 * @param blk Block of data
 	 * @return success Whether insertion was successful
 	 */
+	@Override
 	public boolean insert(byte[] key, byte[] data)
 		throws IOException
 	{
+		System.out.println("Inserting: " + key.toString());
+		MetadataExtent mext;
+		MetadataBlock iblock;
+		MetadataBlock qblock;
+		long rootaddr;
+
+		rootaddr = sb.getRootBlockAddress();
+		if(rootaddr == 0) {
+			System.out.println("Empty SuperBlock Root");
+			mext = getMetadataExtent(0);
+			qblock = mext.allocateMetadataBlock();
+
+			qblock.setKey(key);
+
+			return true;
+		}
+		else {
+			System.out.println("Non-Empty SuperBlock Root");
+			/* XXX Translate to extent N */
+		}
+		
 		return false;
 	}
 
@@ -194,6 +220,7 @@ public class HrfsDisk
 	 * @param key Key of block
 	 * @return Whether removal was successful
 	 */
+	@Override
 	public boolean remove(byte[] key)
 		throws IOException
 	{
@@ -203,9 +230,22 @@ public class HrfsDisk
 	public static void main(String[] args)
 		throws Exception
 	{
+		Random rand;
+		byte[] dbuf;
+		byte[] k1;
 		HrfsDisk disk;
 
+		rand = new Random();
+
+		dbuf = new byte[HrfsDisk.DATA_BLOCK_SIZE];
+		k1 = new byte[20];
+
+		rand.nextBytes(dbuf);
+		rand.nextBytes(k1);
+		
 		disk = new HrfsDisk(Paths.get("test"));
 		disk.format();
+
+		disk.insert(k1, dbuf);
 	}
 }

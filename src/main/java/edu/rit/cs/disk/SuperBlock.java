@@ -17,7 +17,7 @@ class SuperBlock
 {
 	private static final int BOOTSECTOR_SIZE = 512;
 	private static final int ROOTBLOCK_OFFSET = BOOTSECTOR_SIZE;
-	private static final int SUPER_MAGIC = 0xCAFEBABE;
+	public static final int SUPER_MAGIC = 0xCAFEBABE;
 
 	private ByteBuffer mbuf;
 
