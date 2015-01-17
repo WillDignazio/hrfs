@@ -6,11 +6,13 @@
  * an in memory representation of the mapped memory on disk. This
  * is used to provide an interface to metadata values, and information
  * about where data lies.
+ *
+ * @file MetadataBlock.java
+ * @author William Dignazio <wdignazio@gmail.com>
  */
 package edu.rit.cs.disk;
 
 import java.util.Arrays;
-import java.nio.ByteBuffer;
 import java.nio.ByteBuffer;
 
 class MetadataBlock

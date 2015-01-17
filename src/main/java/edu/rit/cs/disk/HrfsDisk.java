@@ -92,10 +92,15 @@ public class HrfsDisk
 		 */
 		double appx = (((double)file.length() - SUPERBLOCK_SIZE)
 			       / (double)DATA_BLOCK_SIZE);
+		
+		System.out.println("Number of data blocks: " + appx);
+		
+		/* Amount of metadata bytes we need */
+		double mbytes = appx * (double)METADATA_BLOCK_SIZE;
+		System.out.println("Number of metadata bytes: " + mbytes);
 
 		/* Then we find how many extents are going to cover the blocks */
-		double nmblks = (double)METADATA_EXTENT_SIZE / (double)METADATA_BLOCK_SIZE;
-		this.mextCount = (int)Math.ceil(appx / nmblks);
+		this.mextCount = (int)Math.ceil(mbytes / (double)METADATA_EXTENT_SIZE);
 		if(this.mextCount == 0)
 			++mextCount;
 	}
@@ -192,15 +197,13 @@ public class HrfsDisk
 			mext = getMetadataExtent(0);
 			qblock = mext.allocateMetadataBlock();
 
-			qblock.setKey(key);
-
 			return true;
 		}
 		else {
 			System.out.println("Non-Empty SuperBlock Root");
 			/* XXX Translate to extent N */
 		}
-		
+
 		return false;
 	}
 
@@ -244,6 +247,7 @@ public class HrfsDisk
 		rand.nextBytes(k1);
 		
 		disk = new HrfsDisk(Paths.get("test"));
+		System.out.println("Extent Count: " + disk.getMetadataExtentCount());
 		disk.format();
 
 		disk.insert(k1, dbuf);
