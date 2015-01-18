@@ -62,8 +62,6 @@ public class HrfsDisk
 	private Path diskPath;
 	private RandomAccessFile file;
 	private FileChannel fchannel;
-	private int mextCount;
-	private long dataOffset;
 
 	private SuperBlock sb;
 	
@@ -84,25 +82,6 @@ public class HrfsDisk
 
 		/* XXX must come after building channel + file obj */
 		this.sb = getSuperBlock();
-		
-		/*
-		 * This gives us the amount of data blocks that can be present in the
-		 * disk. This will will be less as the reserved metadata section will
-		 * consume some, but gives us a rough idea of how much space we need.
-		 */
-		double appx = (((double)file.length() - SUPERBLOCK_SIZE)
-			       / (double)DATA_BLOCK_SIZE);
-		
-		System.out.println("Number of data blocks: " + appx);
-		
-		/* Amount of metadata bytes we need */
-		double mbytes = appx * (double)METADATA_BLOCK_SIZE;
-		System.out.println("Number of metadata bytes: " + mbytes);
-
-		/* Then we find how many extents are going to cover the blocks */
-		this.mextCount = (int)Math.ceil(mbytes / (double)METADATA_EXTENT_SIZE);
-		if(this.mextCount == 0)
-			++mextCount;
 	}
 
 	/**
@@ -145,33 +124,49 @@ public class HrfsDisk
 	}
 
 	/**
-	 * Calculate the number of metadata blocks that are in the
-	 * metadata section of the disk.
-	 * @return exn Number of metadata extents
-	 */
-	public int getMetadataExtentCount()
-	{
-		return mextCount;
-	}
-
-	/**
 	 * Formats the disk to have no known data blocks, this effectively
 	 * erases the content on disk.
 	 *
-	 * NOTE: This does _not_ zero all data on the disk.
+	 * NOTE: This does _not_ zero _all_ data on the disk.
 	 */
 	@Override
 	public void format()
 		throws IOException
 	{
+		double appx;
+		double mbytes;
+		int mextCount;
 		SuperBlock sblock;
 
 		sblock = getSuperBlock();
-		sblock.erase();
 
-		for(int mext=0; mext < getMetadataExtentCount(); ++mext)
+		/*
+		 * This gives us the amount of data blocks that can be present in the
+		 * disk. This will will be less as the reserved metadata section will
+		 * consume some, but gives us a rough idea of how much space we need.
+		 */
+		appx = (((double)file.length() - SUPERBLOCK_SIZE)
+			       / (double)DATA_BLOCK_SIZE);
+		
+		System.out.println("Number of data blocks: " + appx);
+		
+		/* Amount of metadata bytes we need */
+		mbytes = appx * (double)METADATA_BLOCK_SIZE;
+		System.out.println("Number of metadata bytes: " + mbytes);
+
+		/* Then we find how many extents are going to cover the blocks */
+		mextCount = (int)Math.ceil(mbytes / (double)METADATA_EXTENT_SIZE);
+		if(mextCount == 0)
+			++mextCount;
+
+		for(int mext=0; mext < mextCount; ++mext)
 			getMetadataExtent(mext).erase();
 
+		System.out.println("Formatting for " + mextCount + " mextents");
+
+		sblock.setRootBlockAddress(0);
+		sblock.setMetadataExtentCount(mextCount);
+		sblock.setMetadataExtentAvailable(mextCount);
 		sblock.setMagic(SuperBlock.SUPER_MAGIC);
 	}
 
@@ -247,7 +242,6 @@ public class HrfsDisk
 		rand.nextBytes(k1);
 		
 		disk = new HrfsDisk(Paths.get("test"));
-		System.out.println("Extent Count: " + disk.getMetadataExtentCount());
 		disk.format();
 
 		disk.insert(k1, dbuf);

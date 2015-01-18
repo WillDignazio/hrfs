@@ -2,9 +2,14 @@
  * Copyright © 2015
  * Hadoop Replicating File System
  *
- * The in memory representation of the on disk superblock,
- * this block contains the top level node for the on disk
- * tree structure.
+ * The in memory representation of the on disk superblock, this block contains
+ * the top level node for the on disk tree structure.
+ *
+ * On disk format:
+ * 0                                                                          64K 
+ * +----------------------------------------------------------------------------+
+ * | Boot Sector | RooBlk | WrIdx | ExCnt | ExAv |                              |
+ * +----------------------------------------------------------------------------+
  *
  * @file SuperBlock.java
  * @author Will Dignazio <wdignazio@gmail.com>
@@ -15,9 +20,15 @@ import java.nio.ByteBuffer;
 
 class SuperBlock
 {
+	private static final int LONGSZ = (Long.SIZE / Byte.SIZE);
+	private static final int INTSZ = (Integer.SIZE / Byte.SIZE);
+	
 	private static final int BOOTSECTOR_SIZE = 512;
 	private static final int ROOTBLOCK_OFFSET = BOOTSECTOR_SIZE;
-	private static final int WRITEINDEX_OFFSET = BOOTSECTOR_SIZE + (Long.SIZE / Byte.SIZE);
+	private static final int WRITEINDEX_OFFSET = BOOTSECTOR_SIZE + LONGSZ;
+	private static final int EXTENT_COUNT_OFFSET = WRITEINDEX_OFFSET + LONGSZ;
+	private static final int EXTENT_AVAIL_OFFSET = EXTENT_COUNT_OFFSET + LONGSZ;
+
 	public static final int SUPER_MAGIC = 0xCAFEBABE;
 
 	private ByteBuffer mbuf;
@@ -37,7 +48,7 @@ class SuperBlock
 		long magic;
 
 		magic = this.mbuf.getLong(HrfsDisk.SUPERBLOCK_SIZE -
-					  (Long.SIZE / Byte.SIZE));
+					  LONGSZ);
 
 		if(magic == SUPER_MAGIC)
 			return true;
@@ -74,18 +85,42 @@ class SuperBlock
 	public void setMagic(long m)
 	{
 		this.mbuf.putLong(HrfsDisk.SUPERBLOCK_SIZE -
-				  (Long.SIZE / Byte.SIZE),
-				  m);
+				  LONGSZ, m);
 	}
 
 	/**
-	 * Erase the contents of the superblock, fields that
-	 * would lead to a valid filesystem.
+	 * Set the metadata extent count for the store.
+	 * @param count Number of extents in store.
 	 */
-	public void erase()
+	public void setMetadataExtentCount(int count)
 	{
-		/* XXX For now just zero the thing */
-		for(int b=0; b < HrfsDisk.SUPERBLOCK_SIZE; ++b)
-			this.mbuf.put(b, (byte)0);
+		this.mbuf.putInt(EXTENT_COUNT_OFFSET, count);
+	}
+
+	/**
+	 * Get the metadata extent count for the store.
+	 * @return Number of metadata extents
+	 */
+	public int getMetadataExtentCount()
+	{
+		return this.mbuf.getInt(EXTENT_COUNT_OFFSET);
+	}
+
+	/**
+	 * Set the number of available metadata extents.
+	 * @param count Number of available metadata extents.
+	 */
+	public void setMetadataExtentAvailable(int count)
+	{
+		this.mbuf.putInt(EXTENT_AVAIL_OFFSET, count);
+	}
+
+	/**
+	 * Get the number of availalbe metadata extents.
+	 * @return Number of available extents.
+	 */
+	public int getMetadataExtentsAvailable()
+	{
+		return this.mbuf.getInt(EXTENT_AVAIL_OFFSET);
 	}
 }
