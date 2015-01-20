@@ -8,7 +8,7 @@
  * On disk format:
  * 0                                                                          64K 
  * +----------------------------------------------------------------------------+
- * | Boot Sector | RooBlk | WrIdx | ExCnt | ExAv |                              |
+ * | Boot Sector | RooBlk | WrIdx | MWrIdx | ExCnt | ExAv |                     |
  * +----------------------------------------------------------------------------+
  *
  * @file SuperBlock.java
@@ -20,10 +20,10 @@ import java.nio.ByteBuffer;
 
 class SuperBlock
 {	
-	private static final int ROOTBLOCK_OFFSET = 0;
-	private static final int WRITEINDEX_OFFSET = HrfsDisk.LONGSZ;
-	private static final int EXTENT_COUNT_OFFSET = WRITEINDEX_OFFSET + HrfsDisk.LONGSZ;
-	private static final int EXTENT_AVAIL_OFFSET = EXTENT_COUNT_OFFSET + HrfsDisk.LONGSZ;
+	private static final int DATA_INDEX_OFFSET = 0;
+	private static final int META_INDEX_OFFSET = DATA_INDEX_OFFSET + HrfsDisk.LONGSZ;
+	private static final int META_COUNT_OFFSET = META_INDEX_OFFSET + HrfsDisk.LONGSZ;
+	private static final int META_AVAIL_OFFSET = META_COUNT_OFFSET + HrfsDisk.LONGSZ;
 
 	public static final int SUPERBLOCK_SIZE = 4096;
 	public static final int SUPER_MAGIC = 0xCAFEBABE;
@@ -36,8 +36,8 @@ class SuperBlock
 	}
 
 	/**
-	 * Check the magic number for the superblock, if this fails,
-	 * the superblock has become invalid.
+	 * Check the magic number for the superblock, if this fails, the
+	 * superblock has become invalid.
 	 * @return valid True for valid, False for invalid
 	 */
 	public boolean isValid()
@@ -54,27 +54,6 @@ class SuperBlock
 	}
 
 	/**
-	 * Gets the root metadata block address from the superblock, this is
-	 * the first key of the node in the on disk b+ tree structure.
-	 */
-	public long getRootBlockAddress()
-	{
-		long addr;
-
-		addr = this.mbuf.getLong(ROOTBLOCK_OFFSET);
-		return addr;
-	}
-
-	/**
-	 * Sets the root metadata block address of the superblock.
-	 * @param addr Address of the root metadata block.
-	 */
-	public void setRootBlockAddress(long addr)
-	{
-		this.mbuf.putLong(ROOTBLOCK_OFFSET, addr);
-	}
-	
-	/**
 	 * Set the superblock magic value, this will make it such
 	 * that this superblock will pass a validity test.
 	 * @param m Magic value
@@ -86,21 +65,21 @@ class SuperBlock
 	}
 
 	/**
-	 * Set the metadata extent count for the store.
+	 * Set the metadata block count for the store.
 	 * @param count Number of extents in store.
 	 */
 	public void setMetadataBlockCount(long count)
 	{
-		this.mbuf.putLong(EXTENT_COUNT_OFFSET, count);
+		this.mbuf.putLong(META_COUNT_OFFSET, count);
 	}
 
 	/**
-	 * Get the metadata extent count for the store.
+	 * Get the metadata block count for the store.
 	 * @return Number of metadata extents
 	 */
 	public long getMetadataBlockCount()
 	{
-		return this.mbuf.getLong(EXTENT_COUNT_OFFSET);
+		return this.mbuf.getLong(META_COUNT_OFFSET);
 	}
 
 	/**
@@ -109,7 +88,7 @@ class SuperBlock
 	 */
 	public void setMetadataBlockAvailable(long count)
 	{
-		this.mbuf.putLong(EXTENT_AVAIL_OFFSET, count);
+		this.mbuf.putLong(META_AVAIL_OFFSET, count);
 	}
 
 	/**
@@ -118,6 +97,42 @@ class SuperBlock
 	 */
 	public long getMetadataBlockAvailable()
 	{
-		return this.mbuf.getInt(EXTENT_AVAIL_OFFSET);
+		return this.mbuf.getLong(META_AVAIL_OFFSET);
+	}
+
+	/**
+	 * Get the MetadataExtent allocation index.
+	 * @return long Index for next extent to allocate from.
+	 */
+	public long getMetadataBlockIndex()
+	{
+		return this.mbuf.getLong(META_INDEX_OFFSET);
+	}
+
+	/**
+	 * Set the MetadataExtent allocation index.
+	 * @param idx Index for next extent to allocate from.
+	 */
+	public void setMetadataBlockIndex(long idx)
+	{
+		this.mbuf.putLong(META_INDEX_OFFSET, idx);
+	}
+
+	/**
+	 * Get the current data block allocation index.
+	 * @return idx Data block allocation index.
+	 */
+	public long getDataBlockIndex()
+	{
+		return this.mbuf.getLong(DATA_INDEX_OFFSET);
+	}
+
+	/**
+	 * Set the current data block allocation index.
+	 * @param idx Index for next block to allocate.
+	 */
+	public void setDataBlockIndex(long idx)
+	{
+		this.mbuf.putLong(DATA_INDEX_OFFSET, idx);
 	}
 }

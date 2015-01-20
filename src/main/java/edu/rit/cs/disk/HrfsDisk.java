@@ -95,12 +95,7 @@ public class HrfsDisk
 	public void format()
 		throws IOException
 	{
-		long mblkCount;
-		SuperBlock sblock;
-
 		metastore.format();
-		mblkCount = metastore.getBlockCount();
-		System.out.println("Metastore has " + mblkCount + " blocks");	       
 	}
 
 	/**
@@ -113,8 +108,19 @@ public class HrfsDisk
 	public boolean insert(byte[] key, byte[] data)
 		throws IOException
 	{
+		boolean mins;
+
 		System.out.println("Inserting: " + key.toString());
-		return false;
+
+		/*
+		 * XXX Temporary
+		 * For now, we're going to create an in memory allocation
+		 * of block data. This is until we have a working data
+		 * block allocator.
+		 */
+		mins = metastore.insert(key, new byte[DATA_BLOCK_SIZE]);
+
+		return mins;
 	}
 
 	/**

@@ -31,7 +31,18 @@ class MetaStore
 	private RandomAccessFile mFile;
 	private FileChannel mChannel;
 	private long rootBlkAddr;
-	private long mextCount;
+	private SuperBlock sb;
+
+	/*
+	 * XXX Temporary Fields.
+	 *
+	 * These are fields that are used temporarily before we create a safer,
+	 * more journal like method of inserting and removing blocks. These are
+	 * used in lieu of constantly writing to the superblock the new
+	 * information.
+	 */
+	private long _mext_idx;		// Metadata Extent Allocation Index
+	private long _dblk_idx;		// Data Block Allocation Index
 
 	/** Must use a file */
 	private MetaStore() { }
@@ -51,6 +62,10 @@ class MetaStore
 
 		this.mFile = new RandomAccessFile(mPath.toFile(), "rw");
 		this.mChannel = mFile.getChannel();
+		this.sb = getSuperBlock(mChannel);
+
+		this._mext_idx = sb.getMetadataBlockIndex();
+		this._dblk_idx = sb.getDataBlockIndex();
 	}
 
 	/**
@@ -67,22 +82,22 @@ class MetaStore
 
 		exaddr = METADATA_EXTENT_SIZE * exn;
 		mbuf = mChannel.map(FileChannel.MapMode.READ_WRITE,
-				    0,
+				    SuperBlock.SUPERBLOCK_SIZE,
 				    exaddr + METADATA_EXTENT_SIZE).load();
 
 		ext = new MetadataExtent(mbuf, exn);
 		return ext;
 	}
-	
+
 	/**
 	 * Formats the metadata storage unit.
 	 */
 	@Override
-	public void format()
+	public synchronized void format()
 		throws IOException
 	{
-		SuperBlock sb;
 		long appxMext;
+		long mextCount;
 		long mblkCount;
 
 		/*
@@ -110,13 +125,13 @@ class MetaStore
 		System.out.println();
 
 		/* For immediate use, set the new mext count */
-		this.mextCount = appxMext;
+		mextCount = appxMext;
 		mblkCount = (mextCount * METADATA_EXTENT_SIZE) /
 			METADATA_BLOCK_SIZE;
 
-		sb = getSuperBlock();
-		sb.setRootBlockAddress(0);
-		sb.setMetadataBlockCount(this.mextCount);
+		sb.setDataBlockIndex(0);
+		sb.setMetadataBlockIndex(0);
+		sb.setMetadataBlockCount(mblkCount);
 		sb.setMetadataBlockAvailable(mblkCount);
 		sb.setMagic(SuperBlock.SUPER_MAGIC);
 	}
@@ -128,9 +143,18 @@ class MetaStore
 	 * @return whether the object was stored on disk
 	 */
 	@Override
-	public boolean insert(byte[] key, byte[] data)
+	public synchronized boolean insert(byte[] key, byte[] data)
 		throws IOException
 	{
+		System.out.println("Inserting key: " + new String(key));
+		long blkidx;
+
+		/* Check if first node */
+		blkidx = _mext_idx;
+		if(blkidx == 0) {
+			System.out.println("First node in tree...");
+		}
+
 		return false;
 	}
 
@@ -140,7 +164,7 @@ class MetaStore
 	 * @return val Value for metadata object.
 	 */
 	@Override
-	public byte[] get(byte[] key)
+	public synchronized byte[] get(byte[] key)
 		throws IOException
 	{
 		return new byte[1];
@@ -152,33 +176,23 @@ class MetaStore
 	 * @return Whether block was removed.
 	 */
 	@Override
-	public boolean remove(byte[] key)
+	public synchronized boolean remove(byte[] key)
 		throws IOException
 	{
 		return false;
 	}
 
 	/**
-	 * Get the number of extents that are present in this storage.
-	 * @return number of extents.
-	 */
-	public long getBlockCount()
-	{
-		System.out.println("metastore mextcount: " + mextCount);
-		return (mextCount * METADATA_EXTENT_SIZE) / METADATA_BLOCK_SIZE;
-	}
-
-	/**
 	 * Gets the superblock of the on disk structure.
 	 * @return sblock Superblock of the on disk structure.
 	 */
-	private SuperBlock getSuperBlock()
+	private static SuperBlock getSuperBlock(FileChannel channel)
 		throws IOException
 	{
 		MappedByteBuffer mbuf;
 		SuperBlock sblock;
 
-		mbuf = mChannel.map(FileChannel.MapMode.READ_WRITE,
+		mbuf = channel.map(FileChannel.MapMode.READ_WRITE,
 				    0,
 				    SuperBlock.SUPERBLOCK_SIZE).load();
 
@@ -186,3 +200,4 @@ class MetaStore
 		return sblock;
 	}
 }
+
