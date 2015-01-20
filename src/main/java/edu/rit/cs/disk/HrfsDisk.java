@@ -9,19 +9,18 @@
  * On Disk Data Format:
  *
  * Disk:
- *  Superblock
- *   |
- * +--+--------------------------------------------------+
- * |  | Metadata |              Data		         |
- * +--+--------------------------------------------------+
- * 0    |                     |
+ *
+ * +---------------+ +-------------------------------------+
+ * | Metadata File | |         Data File     	           |
+ * +---------------+ +-------------------------------------+
+ *      |                     |
  *      |           +-----------------------------+
  *      |           | DataBlock | DataBlock | ... |
  *      |           +-----------------------------+
  * +-----------------------------------------------------+
  * | MetadataExtent |  MetadataExtent  |  ...  |    |    |
  * +-----------------------------------------------------+
- * 0            4096         |                       65536
+ * 0            4096         |
  *                           |
  *                     +-------------------------------+
  *                     | MetadataBlock | ... | ...     |
@@ -53,74 +52,37 @@ import java.io.IOException;
 public class HrfsDisk
 	implements HrfsBlockStore
 {
-	public static final int SUPERBLOCK_SIZE		= 4096;
-	public static final int METADATA_EXTENT_SIZE	= 4096;
-	public static final int METADATA_KEY_SIZE	= 20;
-	public static final int METADATA_BLOCK_SIZE	= 64;
+	public static final int LONGSZ = (Long.SIZE / Byte.SIZE);
 	public static final int DATA_BLOCK_SIZE		= 1024*64; // 64 kib
 
-	private Path diskPath;
-	private RandomAccessFile file;
-	private FileChannel fchannel;
+	private Path mblkPath;
+	private Path dblkPath;
+	private FileChannel dChannel;
 
 	private SuperBlock sb;
+	private MetaStore metastore;
+
+	/** No default constructor */
+	private HrfsDisk() { }
 	
 	/**
 	 * Build a Disk object for the filesystem, this will be the interface
 	 * object for all on disk data structures and data objects.
 	 * @param path Path to on disk file for storage
 	 */
-	public HrfsDisk(Path path)
+	public HrfsDisk(Path mblkPath, Path dblkPath)
 		throws FileNotFoundException, IOException
 	{
+		long rootAddr;
 
-		if(Files.notExists(path, LinkOption.NOFOLLOW_LINKS))
-			throw new FileNotFoundException(path.toString());
+		if(Files.notExists(dblkPath, LinkOption.NOFOLLOW_LINKS))
+			throw new FileNotFoundException(dblkPath.toString());
 
-		this.file = new RandomAccessFile(path.toFile(), "rw");
-		this.fchannel = file.getChannel();
+		this.mblkPath = mblkPath;
+		this.dblkPath = dblkPath;
+		this.dChannel = new RandomAccessFile(dblkPath.toFile(), "rw").getChannel();
 
-		/* XXX must come after building channel + file obj */
-		this.sb = getSuperBlock();
-	}
-
-	/**
-	 * Gets the superblock of the on disk structure.
-	 * @return sblock Superblock of the on disk structure.
-	 */
-	private SuperBlock getSuperBlock()
-		throws IOException
-	{
-		MappedByteBuffer mbuf;
-		SuperBlock sblock;
-
-		mbuf = fchannel.map(FileChannel.MapMode.READ_WRITE,
-				    0,
-				    SUPERBLOCK_SIZE).load();
-
-		sblock = new SuperBlock(mbuf);
-		return sblock;
-	}
-	
-	/**
-	 * Retrieve a mapping to the numeric extent given to the method.
-	 * @param exn Extent number
-	 * @return mbuf MappedByteBuffer of extent
-	 */
-	private MetadataExtent getMetadataExtent(int exn)
-		throws IOException
-	{
-		MetadataExtent ext;
-		MappedByteBuffer mbuf;
-		long exaddr;
-
-		exaddr = METADATA_EXTENT_SIZE * exn;
-		mbuf = fchannel.map(FileChannel.MapMode.READ_WRITE,
-				    exaddr + SUPERBLOCK_SIZE,
-				    exaddr + METADATA_EXTENT_SIZE).load();
-
-		ext = new MetadataExtent(mbuf.duplicate(), exn);
-		return ext;
+		this.metastore = new MetaStore(mblkPath);
 	}
 
 	/**
@@ -133,41 +95,12 @@ public class HrfsDisk
 	public void format()
 		throws IOException
 	{
-		double appx;
-		double mbytes;
-		int mextCount;
+		long mblkCount;
 		SuperBlock sblock;
 
-		sblock = getSuperBlock();
-
-		/*
-		 * This gives us the amount of data blocks that can be present in the
-		 * disk. This will will be less as the reserved metadata section will
-		 * consume some, but gives us a rough idea of how much space we need.
-		 */
-		appx = (((double)file.length() - SUPERBLOCK_SIZE)
-			       / (double)DATA_BLOCK_SIZE);
-		
-		System.out.println("Number of data blocks: " + appx);
-		
-		/* Amount of metadata bytes we need */
-		mbytes = appx * (double)METADATA_BLOCK_SIZE;
-		System.out.println("Number of metadata bytes: " + mbytes);
-
-		/* Then we find how many extents are going to cover the blocks */
-		mextCount = (int)Math.ceil(mbytes / (double)METADATA_EXTENT_SIZE);
-		if(mextCount == 0)
-			++mextCount;
-
-		for(int mext=0; mext < mextCount; ++mext)
-			getMetadataExtent(mext).erase();
-
-		System.out.println("Formatting for " + mextCount + " mextents");
-
-		sblock.setRootBlockAddress(0);
-		sblock.setMetadataExtentCount(mextCount);
-		sblock.setMetadataExtentAvailable(mextCount);
-		sblock.setMagic(SuperBlock.SUPER_MAGIC);
+		metastore.format();
+		mblkCount = metastore.getBlockCount();
+		System.out.println("Metastore has " + mblkCount + " blocks");	       
 	}
 
 	/**
@@ -181,24 +114,6 @@ public class HrfsDisk
 		throws IOException
 	{
 		System.out.println("Inserting: " + key.toString());
-		MetadataExtent mext;
-		MetadataBlock iblock;
-		MetadataBlock qblock;
-		long rootaddr;
-
-		rootaddr = sb.getRootBlockAddress();
-		if(rootaddr == 0) {
-			System.out.println("Empty SuperBlock Root");
-			mext = getMetadataExtent(0);
-			qblock = mext.allocateMetadataBlock();
-
-			return true;
-		}
-		else {
-			System.out.println("Non-Empty SuperBlock Root");
-			/* XXX Translate to extent N */
-		}
-
 		return false;
 	}
 
@@ -240,8 +155,8 @@ public class HrfsDisk
 
 		rand.nextBytes(dbuf);
 		rand.nextBytes(k1);
-		
-		disk = new HrfsDisk(Paths.get("test"));
+
+		disk = new HrfsDisk(Paths.get("test-meta"), Paths.get("test-data"));
 		disk.format();
 
 		disk.insert(k1, dbuf);

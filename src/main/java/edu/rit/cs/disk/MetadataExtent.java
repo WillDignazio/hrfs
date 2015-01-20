@@ -34,7 +34,7 @@ class MetadataExtent
 		usedBlocks = new LinkedList<MetadataBlock>();
 		
 		for(int mblk=0;
-		    mblk < (HrfsDisk.METADATA_EXTENT_SIZE / HrfsDisk.METADATA_BLOCK_SIZE);
+		    mblk < (MetaStore.METADATA_EXTENT_SIZE / MetaStore.METADATA_BLOCK_SIZE);
 		    mblk++) {
 			MetadataBlock blk;
 
@@ -95,7 +95,7 @@ class MetadataExtent
 	{
 		byte[] zbuf;
 
-		zbuf = new byte[HrfsDisk.METADATA_KEY_SIZE];
+		zbuf = new byte[MetaStore.METADATA_KEY_SIZE];
 		
 		/*
 		 * XXX Warning

@@ -18,7 +18,7 @@ import java.nio.ByteBuffer;
 class MetadataBlock
 {
 	private static final int KEY_OFFSET = 0;
-	private static final int LOCATION_OFFSET = HrfsDisk.METADATA_KEY_SIZE;
+	private static final int LOCATION_OFFSET = MetaStore.METADATA_KEY_SIZE;
 	private static final int NEXT_OFFSET = LOCATION_OFFSET + (Long.SIZE / Byte.SIZE);
 	private static final int LEFT_OFFSET = NEXT_OFFSET + (Long.SIZE / Byte.SIZE);
 	private static final int RIGHT_OFFSET = LEFT_OFFSET + (Long.SIZE / Byte.SIZE);
@@ -38,7 +38,7 @@ class MetadataBlock
 	{
 		this.mbuf = mbuf;
 		this.mxn = mxn;
-		this.offset = mxn * HrfsDisk.METADATA_BLOCK_SIZE;
+		this.offset = mxn * MetaStore.METADATA_BLOCK_SIZE;
 	}
 
 	/**
@@ -48,7 +48,7 @@ class MetadataBlock
 	 */
 	public boolean isAllocated()
 	{
-		for(int b=0; b < HrfsDisk.METADATA_KEY_SIZE; ++b)
+		for(int b=0; b < MetaStore.METADATA_KEY_SIZE; ++b)
 			if(mbuf.get(b) != 0)
 				return true;
 
@@ -77,7 +77,7 @@ class MetadataBlock
 	 */
 	public void setKey(byte[] key)
 	{
-		for(int b=0; b < HrfsDisk.METADATA_KEY_SIZE; ++b)
+		for(int b=0; b < MetaStore.METADATA_KEY_SIZE; ++b)
 			this.mbuf.put(offset+KEY_OFFSET+b, key[b]);
 	}
 

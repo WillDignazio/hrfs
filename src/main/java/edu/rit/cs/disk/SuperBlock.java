@@ -19,16 +19,13 @@ package edu.rit.cs.disk;
 import java.nio.ByteBuffer;
 
 class SuperBlock
-{
-	private static final int LONGSZ = (Long.SIZE / Byte.SIZE);
-	private static final int INTSZ = (Integer.SIZE / Byte.SIZE);
-	
-	private static final int BOOTSECTOR_SIZE = 512;
-	private static final int ROOTBLOCK_OFFSET = BOOTSECTOR_SIZE;
-	private static final int WRITEINDEX_OFFSET = BOOTSECTOR_SIZE + LONGSZ;
-	private static final int EXTENT_COUNT_OFFSET = WRITEINDEX_OFFSET + LONGSZ;
-	private static final int EXTENT_AVAIL_OFFSET = EXTENT_COUNT_OFFSET + LONGSZ;
+{	
+	private static final int ROOTBLOCK_OFFSET = 0;
+	private static final int WRITEINDEX_OFFSET = HrfsDisk.LONGSZ;
+	private static final int EXTENT_COUNT_OFFSET = WRITEINDEX_OFFSET + HrfsDisk.LONGSZ;
+	private static final int EXTENT_AVAIL_OFFSET = EXTENT_COUNT_OFFSET + HrfsDisk.LONGSZ;
 
+	public static final int SUPERBLOCK_SIZE = 4096;
 	public static final int SUPER_MAGIC = 0xCAFEBABE;
 
 	private ByteBuffer mbuf;
@@ -47,8 +44,8 @@ class SuperBlock
 	{
 		long magic;
 
-		magic = this.mbuf.getLong(HrfsDisk.SUPERBLOCK_SIZE -
-					  LONGSZ);
+		magic = this.mbuf.getLong(SUPERBLOCK_SIZE -
+					  HrfsDisk.LONGSZ);
 
 		if(magic == SUPER_MAGIC)
 			return true;
@@ -84,42 +81,42 @@ class SuperBlock
 	 */
 	public void setMagic(long m)
 	{
-		this.mbuf.putLong(HrfsDisk.SUPERBLOCK_SIZE -
-				  LONGSZ, m);
+		this.mbuf.putLong(SUPERBLOCK_SIZE -
+				  HrfsDisk.LONGSZ, m);
 	}
 
 	/**
 	 * Set the metadata extent count for the store.
 	 * @param count Number of extents in store.
 	 */
-	public void setMetadataExtentCount(int count)
+	public void setMetadataBlockCount(long count)
 	{
-		this.mbuf.putInt(EXTENT_COUNT_OFFSET, count);
+		this.mbuf.putLong(EXTENT_COUNT_OFFSET, count);
 	}
 
 	/**
 	 * Get the metadata extent count for the store.
 	 * @return Number of metadata extents
 	 */
-	public int getMetadataExtentCount()
+	public long getMetadataBlockCount()
 	{
-		return this.mbuf.getInt(EXTENT_COUNT_OFFSET);
+		return this.mbuf.getLong(EXTENT_COUNT_OFFSET);
 	}
 
 	/**
 	 * Set the number of available metadata extents.
 	 * @param count Number of available metadata extents.
 	 */
-	public void setMetadataExtentAvailable(int count)
+	public void setMetadataBlockAvailable(long count)
 	{
-		this.mbuf.putInt(EXTENT_AVAIL_OFFSET, count);
+		this.mbuf.putLong(EXTENT_AVAIL_OFFSET, count);
 	}
 
 	/**
 	 * Get the number of availalbe metadata extents.
 	 * @return Number of available extents.
 	 */
-	public int getMetadataExtentsAvailable()
+	public long getMetadataBlockAvailable()
 	{
 		return this.mbuf.getInt(EXTENT_AVAIL_OFFSET);
 	}
