@@ -14,8 +14,7 @@ import java.util.LinkedList;
 
 class MetadataExtent
 {
-	private LinkedList<MetadataBlock> freeBlocks;
-	private LinkedList<MetadataBlock> usedBlocks;
+	private LinkedList<MetadataBlock> blocks;
 	private ByteBuffer mbuf;
 	private long exn;
 
@@ -29,62 +28,16 @@ class MetadataExtent
 	{
 		this.mbuf = mbuf;
 		this.exn = exn;
+		this.blocks = new LinkedList<MetadataBlock>();
 
-		freeBlocks = new LinkedList<MetadataBlock>();
-		usedBlocks = new LinkedList<MetadataBlock>();
-		
 		for(int mblk=0;
 		    mblk < (MetaStore.METADATA_EXTENT_SIZE / MetaStore.METADATA_BLOCK_SIZE);
 		    mblk++) {
 			MetadataBlock blk;
 
 			blk = new MetadataBlock(mbuf.duplicate(), mblk);
-			if(blk.isAllocated())
-				usedBlocks.add(blk);
-			else
-				freeBlocks.add(blk);
+			blocks.add(blk);
 		}
-	}
-	
-	/**
-	 * Allocate a block from within the extent, this will reduce the
-	 * of free blocks by 1, and increase the amount of used blocks
-	 * by 1. If there are no more blocks within the extent, null shall
-	 * be returned.
-	 *
-	 * XXX Need to throw out of blocks exceptions
-	 * @return block New metadata block
-	 */
-	public MetadataBlock allocateMetadataBlock()
-	{
-		MetadataBlock block;
-		byte[] nbuf;
-
-		if(usedBlocks.size() == 0)
-			return null;
-
-		block = freeBlocks.remove(0);
-		usedBlocks.add(block);
-		
-		return block;
-	}
-
-	/**
-	 * Get the number of free blocks in the extent.
-	 * @return blocks Number of free metadata blocks
-	 */
-	public int freeBlockCount()
-	{
-		return this.freeBlocks.size();
-	}
-
-	/**
-	 * Get the number of used blocks in the extent.
-	 * @return used Number of used metadata blocks.
-	 */
-	public int usedBlockCount()
-	{
-		return this.usedBlocks.size();
 	}
 
 	/**
@@ -104,7 +57,7 @@ class MetadataExtent
 		 * if the key is zero'd and that the other values
 		 * within it are invalid.
 		 */
-		for(MetadataBlock mblock : this.usedBlocks) {
+		for(MetadataBlock mblock : this.blocks) {
 			mblock.setKey(zbuf);
 			mblock.setDataBlockLocation(0);
 			mblock.setNextBlockLocation(0);
@@ -119,6 +72,6 @@ class MetadataExtent
 	 */
 	public LinkedList<MetadataBlock> getMetadataBlocks()
 	{
-		return this.usedBlocks;
+		return this.blocks;
 	}
 }

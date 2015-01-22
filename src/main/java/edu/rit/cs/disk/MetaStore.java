@@ -19,6 +19,7 @@ import java.nio.channels.FileChannel;
 import java.io.RandomAccessFile;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 
 class MetaStore
 	implements HrfsBlockStore
@@ -87,6 +88,34 @@ class MetaStore
 
 		ext = new MetadataExtent(mbuf, exn);
 		return ext;
+	}
+
+	/**
+	 * Retrieve the metadata block as an index from disk.
+	 * @param bxn Block index number
+	 */
+	private MetadataBlock getMetadataBlock(int bxn)
+		throws IOException
+	{
+		MetadataBlock mblk;
+		MetadataExtent ext;
+		List<MetadataBlock> extblks;
+		int byteoff;
+		int mextn;
+		int rblkn;
+
+		/* Translate to extent block belongs to. */
+		byteoff = (bxn * METADATA_BLOCK_SIZE);
+		
+		mextn = byteoff / METADATA_EXTENT_SIZE;
+		ext = getMetadataExtent(mextn);
+		extblks = ext.getMetadataBlocks();
+
+		/* Get the relative block number */
+		rblkn = byteoff % METADATA_EXTENT_SIZE;
+		System.out.println("Requested mblock " + rblkn + " from extent " + mextn);
+
+		return ext.getMetadataBlocks().get(rblkn);
 	}
 
 	/**
