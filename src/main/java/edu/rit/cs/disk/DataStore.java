@@ -15,6 +15,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
 import java.nio.channels.FileChannel;
+import java.nio.MappedByteBuffer;
+import java.nio.ByteBuffer;
 import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.io.IOException;
@@ -55,6 +57,27 @@ class DataStore
 	@Override
 	public void format()
 		throws IOException { }
+
+	/**
+	 * Maps an integer to a block within the data store, the block location
+	 * on disk is derived from the block size of the store.
+	 * @param didx Data block index
+	 * @return buffer ByteBuffer backed by data block
+	 */
+	private ByteBuffer getDataBlockMap(int didx)
+		throws IOException
+	{
+		MappedByteBuffer buffer;
+		long blkaddr;
+
+		/* Translate to correct byte offset */
+		blkaddr = didx * DATA_BLOCK_SIZE;
+		buffer = dChannel.map(FileChannel.MapMode.READ_WRITE,
+				    DATA_BLOCK_SIZE,
+				    blkaddr);
+
+		return buffer;
+	}
 	
 	/**
 	 * Insert a data block into the store.
@@ -70,7 +93,9 @@ class DataStore
 
 		if(key.length != HrfsDisk.LONGSZ)
 			throw new IOException("Invalid Key Size");
-		
+		if(data.length != DATA_BLOCK_SIZE)
+			throw new IOException("Invalid Block Size");
+
 		return false;
 	}
 

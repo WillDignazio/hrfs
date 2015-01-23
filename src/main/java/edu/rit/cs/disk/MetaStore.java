@@ -174,6 +174,11 @@ class MetaStore
 		System.out.println("Inserting key: " + new String(key));
 		long blkidx;
 
+		if(key.length != METADATA_KEY_SIZE)
+			throw new IOException("Invalid Key Size");
+		if(data.length != METADATA_BLOCK_SIZE)
+			throw new IOException("Invalid Block Size");
+		
 		/* Check if first node */
 		blkidx = _mext_idx;
 		if(blkidx == 0) {
