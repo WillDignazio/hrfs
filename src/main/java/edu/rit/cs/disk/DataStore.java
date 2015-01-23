@@ -64,7 +64,7 @@ class DataStore
 	 * @param didx Data block index
 	 * @return buffer ByteBuffer backed by data block
 	 */
-	private ByteBuffer getDataBlockMap(int didx)
+	private ByteBuffer getDataBlockMap(long didx)
 		throws IOException
 	{
 		MappedByteBuffer buffer;
@@ -89,14 +89,24 @@ class DataStore
 	public boolean insert(byte[] key, byte[] data)
 		throws IOException
 	{
-		long blkaddr;
+		ByteBuffer kbuf;
+		ByteBuffer blkbuf;
+		long blkn;
 
 		if(key.length != HrfsDisk.LONGSZ)
 			throw new IOException("Invalid Key Size");
 		if(data.length != DATA_BLOCK_SIZE)
 			throw new IOException("Invalid Block Size");
 
-		return false;
+		/* XXX Not ideal, but until we make an object based store */
+		kbuf = ByteBuffer.wrap(key);
+		blkn = kbuf.getLong();
+
+		/* Retrieve a mapping to disk, flush data buffer */
+		blkbuf = getDataBlockMap(blkn);
+		blkbuf.put(data, 0, data.length);
+
+		return true;
 	}
 
 	/**

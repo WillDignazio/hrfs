@@ -100,6 +100,7 @@ public class HrfsDisk
 		throws IOException
 	{
 		metastore.format();
+		datastore.format();
 	}
 
 	/**
@@ -112,19 +113,9 @@ public class HrfsDisk
 	public boolean insert(byte[] key, byte[] data)
 		throws IOException
 	{
-		boolean mins;
-
 		System.out.println("Inserting: " + key.toString());
 
-		/*
-		 * XXX Temporary
-		 * For now, we're going to create an in memory allocation
-		 * of block data. This is until we have a working data
-		 * block allocator.
-		 */
-		mins = metastore.insert(key, new byte[DataStore.DATA_BLOCK_SIZE]);
-
-		return mins;
+		return false;
 	}
 
 	/**
