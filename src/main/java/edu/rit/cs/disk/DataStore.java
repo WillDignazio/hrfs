@@ -54,6 +54,8 @@ class DataStore
 		 * Constructor that takes the block number within the store and
 		 * produces a callback object that will yield the result of a
 		 * future promising a DataBlock.
+		 * @param blkn Block number to insert data into
+		 * @param blk Block data
 		 */
 		public InsertCallback(long blkn, byte[] blk)
 		{
