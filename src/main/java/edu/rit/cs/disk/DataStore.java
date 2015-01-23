@@ -79,7 +79,7 @@ class DataStore
 			/* Retrieve a mapping to disk, flush data buffer */
 			blkbuf = getDataBlockMap(this._blkn);
 			blkbuf.put(this._blk, 0, DATA_BLOCK_SIZE);
-			dblk = new DataBlock(blkbuf);
+			dblk = new DataBlock(blkbuf, _blkn);
 
 			return dblk;
 		}

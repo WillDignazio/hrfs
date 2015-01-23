@@ -17,13 +17,17 @@ import java.nio.ByteBuffer;
 final class DataBlock
 	extends Block
 {
+	private final long _idx;
+
 	/**
 	 * Build a data block object, careful not to break immutability.
 	 * @param buffer Backing buffer of DataBlock
+	 * @param blkn Block index number
 	 */
-	public DataBlock(ByteBuffer buffer)
+	public DataBlock(ByteBuffer buffer, long blkn)
 	{
 		super(buffer);
+		this._idx = blkn;
 	}
 
 	/**
@@ -34,5 +38,14 @@ final class DataBlock
 	public long size()
 	{
 		return DataStore.DATA_BLOCK_SIZE;
+	}
+
+	/**
+	 * Get the block index of this data block.
+	 * @return blkn Data block index
+	 */
+	public long getBlockIndex()
+	{
+		return this._idx;
 	}
 }
