@@ -22,13 +22,9 @@ import java.io.RandomAccessFile;
 import java.io.IOException;
 
 class DataStore
-	implements HrfsBlockStore
+	extends BlockStore
 {
 	public static final int DATA_BLOCK_SIZE		= 1024*64; // 64 kib
-
-	private Path dPath;
-	private RandomAccessFile dFile;
-	private FileChannel dChannel;
 
 	/** Must use a backing file */
 	private DataStore() { }
@@ -41,9 +37,7 @@ class DataStore
 	public DataStore(Path path)
 		throws FileNotFoundException, IOException
 	{
-		this.dPath = path;
-		this.dFile = new RandomAccessFile(dPath.toFile(), "rw");
-		this.dChannel = dFile.getChannel();
+		super(path);
 	}
 
 	/**
@@ -72,7 +66,7 @@ class DataStore
 
 		/* Translate to correct byte offset */
 		blkaddr = didx * DATA_BLOCK_SIZE;
-		buffer = dChannel.map(FileChannel.MapMode.READ_WRITE,
+		buffer = this.getChannel().map(FileChannel.MapMode.READ_WRITE,
 				    DATA_BLOCK_SIZE,
 				    blkaddr);
 

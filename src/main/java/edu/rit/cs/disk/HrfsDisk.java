@@ -50,13 +50,9 @@ import java.io.RandomAccessFile;
 import java.io.IOException;
 
 public class HrfsDisk
-	implements HrfsBlockStore
+	extends BlockStore
 {
 	public static final int LONGSZ = (Long.SIZE / Byte.SIZE);
-
-	private Path mblkPath;
-	private Path dblkPath;
-	private FileChannel dChannel;
 
 	private SuperBlock sb;
 	private MetaStore metastore;
@@ -73,19 +69,11 @@ public class HrfsDisk
 	public HrfsDisk(Path mblkPath, Path dblkPath)
 		throws FileNotFoundException, IOException
 	{
-		long rootAddr;
+		super();
 
-		if(Files.notExists(dblkPath, LinkOption.NOFOLLOW_LINKS))
-			throw new FileNotFoundException(dblkPath.toString());
-
-		if(Files.notExists(mblkPath, LinkOption.NOFOLLOW_LINKS))
-			throw new FileNotFoundException(mblkPath.toString());
-
-		this.mblkPath = mblkPath;
-		this.dblkPath = dblkPath;
-		this.dChannel = new RandomAccessFile(dblkPath.toFile(), "rw").getChannel();
-
+		System.out.println("Initializing metastore: " + mblkPath.toString());
 		this.metastore = new MetaStore(mblkPath);
+		System.out.println("Initializing datastore: " + dblkPath.toString());
 		this.datastore = new DataStore(dblkPath);
 	}
 
@@ -142,7 +130,6 @@ public class HrfsDisk
 	}
 	
 	public static void main(String[] args)
-		throws Exception
 	{
 		Random rand;
 		byte[] dbuf;
@@ -157,9 +144,16 @@ public class HrfsDisk
 		rand.nextBytes(dbuf);
 		rand.nextBytes(k1);
 
-		disk = new HrfsDisk(Paths.get("test-meta"), Paths.get("test-data"));
-		disk.format();
-
-		disk.insert(k1, dbuf);
+		try {
+			disk = new HrfsDisk(Paths.get("test-meta"), Paths.get("test-data"));
+			disk.format();
+			disk.insert(k1, dbuf);
+		}
+		catch(FileNotFoundException e) {
+			System.err.println("Test file not present: " + e.toString());
+		}
+		catch(IOException e) {
+			System.err.println("Error creating stores: " + e.toString());
+		}
 	}
 }

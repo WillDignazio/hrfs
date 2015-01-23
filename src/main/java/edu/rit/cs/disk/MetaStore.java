@@ -13,8 +13,7 @@ import org.apache.commons.lang.StringUtils;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.MappedByteBuffer;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.io.RandomAccessFile;
 import java.io.FileNotFoundException;
@@ -22,15 +21,12 @@ import java.io.IOException;
 import java.util.List;
 
 class MetaStore
-	implements HrfsBlockStore
+	extends BlockStore
 {
 	public static final int METADATA_EXTENT_SIZE	= 4096;
 	public static final int METADATA_KEY_SIZE	= 20;
 	public static final int METADATA_BLOCK_SIZE	= 64;
 
-	private Path mPath;
-	private RandomAccessFile mFile;
-	private FileChannel mChannel;
 	private SuperBlock sb;
 
 	/*
@@ -55,12 +51,9 @@ class MetaStore
 	public MetaStore(Path path)
 		throws FileNotFoundException, IOException
 	{
-		this.mPath = path;
+		super(path);
 
-		this.mFile = new RandomAccessFile(mPath.toFile(), "rw");
-		this.mChannel = mFile.getChannel();
-		this.sb = getSuperBlock(mChannel);
-
+		this.sb = getSuperBlock();
 		this._mext_idx = sb.getMetadataBlockIndex();
 		this._dblk_idx = sb.getDataBlockIndex();
 	}
@@ -68,19 +61,19 @@ class MetaStore
 	/**
 	 * Retrieve a mapping to the numeric extent given to the method.
 	 * @param exn Extent number
-	 * @return mbuf MappedByteBuffer of extent
+	 * @return mbuf ByteBuffer of extent
 	 */
 	private MetadataExtent getMetadataExtent(int exn)
 		throws IOException
 	{
 		MetadataExtent ext;
-		MappedByteBuffer mbuf;
+		ByteBuffer mbuf;
 		long exaddr;
 
 		exaddr = METADATA_EXTENT_SIZE * exn;
-		mbuf = mChannel.map(FileChannel.MapMode.READ_WRITE,
-				    SuperBlock.SUPERBLOCK_SIZE,
-				    exaddr + METADATA_EXTENT_SIZE).load();
+		mbuf = this.getChannel().map(FileChannel.MapMode.READ_WRITE,
+					     SuperBlock.SUPERBLOCK_SIZE,
+					     exaddr + METADATA_EXTENT_SIZE).load();
 
 		ext = new MetadataExtent(mbuf, exn);
 		return ext;
@@ -129,10 +122,8 @@ class MetaStore
 		 * Give a low-ball approximate count of metadata blocks that we
 		 * can fit into this metadata storage unit.
 		 */
-		System.out.println("mFile.length: " + mFile.length());
-		appxMext = mFile.length() / METADATA_EXTENT_SIZE;
+		appxMext = this.size() / METADATA_EXTENT_SIZE;
 
-		System.out.println("Formatting " + mPath.toString() + ":");
 		for(int mext=0; mext < appxMext; ++mext) {
 			double pc = ((double)mext / appxMext) * 100.0;
 			System.out.print("[");
@@ -217,15 +208,16 @@ class MetaStore
 	 * Gets the superblock of the on disk structure.
 	 * @return sblock Superblock of the on disk structure.
 	 */
-	private static SuperBlock getSuperBlock(FileChannel channel)
+	private SuperBlock getSuperBlock()
 		throws IOException
 	{
-		MappedByteBuffer mbuf;
+		ByteBuffer mbuf;
 		SuperBlock sblock;
 
-		mbuf = channel.map(FileChannel.MapMode.READ_WRITE,
-				    0,
-				    SuperBlock.SUPERBLOCK_SIZE).load();
+		System.out.println("Retrieving metastore superblock from channel: " +
+				   this.getChannel().toString());
+		mbuf = this.getChannel().map(FileChannel.MapMode.READ_WRITE, 0,
+					     SuperBlock.SUPERBLOCK_SIZE).load();
 
 		sblock = new SuperBlock(mbuf);
 		return sblock;
