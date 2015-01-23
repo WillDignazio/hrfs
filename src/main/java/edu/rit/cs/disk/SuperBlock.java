@@ -26,7 +26,7 @@ class SuperBlock
 	private static final int META_AVAIL_OFFSET = META_COUNT_OFFSET + HrfsDisk.LONGSZ;
 	private static final int META_ROOT_OFFSET = META_AVAIL_OFFSET + HrfsDisk.LONGSZ;
 
-	public static final int SUPERBLOCK_OFFSET = META_ROOT_OFFSET + HrfsDisk.LONGSZ;
+	public static final int SUPERBLOCK_MAGIC_OFFSET = META_ROOT_OFFSET + HrfsDisk.LONGSZ;
 	public static final int SUPERBLOCK_SIZE = 4096;
 	public static final int SUPER_MAGIC = 0xCAFEBABE;
 
@@ -62,8 +62,8 @@ class SuperBlock
 	 */
 	public void setMagic(long m)
 	{
-		this.mbuf.putLong(SUPERBLOCK_SIZE -
-				  HrfsDisk.LONGSZ, m);
+		this.mbuf.putLong(SUPERBLOCK_MAGIC_OFFSET, m);
+
 	}
 
 	/**
