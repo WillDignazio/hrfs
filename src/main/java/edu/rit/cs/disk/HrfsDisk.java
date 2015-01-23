@@ -38,7 +38,9 @@
 package edu.rit.cs.disk;
 
 import java.util.Random;
+import java.util.ArrayList;
 import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
@@ -71,10 +73,7 @@ public class HrfsDisk
 		throws FileNotFoundException, IOException
 	{
 		super();
-
-		System.out.println("Initializing metastore: " + mblkPath.toString());
 		this.metastore = new MetaStore(mblkPath);
-		System.out.println("Initializing datastore: " + dblkPath.toString());
 		this.datastore = new DataStore(dblkPath);
 	}
 
@@ -103,7 +102,9 @@ public class HrfsDisk
 		throws IOException
 	{
 		System.out.println("Inserting: " + key.toString());
-		return null;
+
+		byte[] tb = new byte[LONGSZ];
+		return datastore.insert(tb, data);
 	}
 
 	/**
@@ -131,24 +132,27 @@ public class HrfsDisk
 	}
 	
 	public static void main(String[] args)
+		throws InterruptedException, ExecutionException
 	{
 		Random rand;
 		byte[] dbuf;
-		byte[] k1;
+		byte[] dkey;
+		Future<DataBlock> future;
 		HrfsDisk disk;
 
 		rand = new Random();
-
 		dbuf = new byte[DataStore.DATA_BLOCK_SIZE];
-		k1 = new byte[20];
-
-		rand.nextBytes(dbuf);
-		rand.nextBytes(k1);
+		dkey = new byte[MetaStore.METADATA_KEY_SIZE];
 
 		try {
 			disk = new HrfsDisk(Paths.get("test-meta"), Paths.get("test-data"));
 			disk.format();
-			disk.insert(k1, dbuf);
+
+			rand.nextBytes(dbuf);
+			rand.nextBytes(dkey);
+
+			future = disk.insert(dkey, dbuf);
+			future.get();
 		}
 		catch(FileNotFoundException e) {
 			System.err.println("Test file not present: " + e.toString());

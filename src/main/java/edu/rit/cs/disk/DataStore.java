@@ -11,7 +11,14 @@
  */
 package edu.rit.cs.disk;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
@@ -26,19 +33,82 @@ class DataStore
 	extends BlockStore<DataBlock>
 {
 	public static final int DATA_BLOCK_SIZE		= 1024*64; // 64 kib
+	public static final int DEFAULT_WORKER_COUNT	= 4;
+	public static final int DEFAULT_WORKQ_SIZE	= 100;
+
+	private ExecutorService wpool;
+	private BlockingQueue<Runnable> wqueue;
+
+	/**
+	 * Helper class for submissions of worker jobs that needs to put data on
+	 * disk. This performs the insertion procedure that actually copies the
+	 * given byte buffer.
+	 */
+	private class InsertCallback
+		implements Callable<DataBlock>
+	{
+		private long _blkn;
+		private byte[] _blk;
+
+		/**
+		 * Constructor that takes the block number within the store and
+		 * produces a callback object that will yield the result of a
+		 * future promising a DataBlock.
+		 */
+		public InsertCallback(long blkn, byte[] blk)
+		{
+			super();
+			this._blkn = blkn;
+			this._blk = blk;
+		}
+
+		/**
+		 * Runs the insertion routine for this store, and returns a block
+		 * object as the promised value.
+		 * @return dblk Block with backing disk page.
+		 */
+		@Override
+		public DataBlock call()
+			throws Exception
+		{
+			DataBlock dblk;
+			ByteBuffer blkbuf;
+
+			/* Retrieve a mapping to disk, flush data buffer */
+			blkbuf = getDataBlockMap(this._blkn);
+			blkbuf.put(this._blk, 0, DATA_BLOCK_SIZE);
+			dblk = new DataBlock(blkbuf);
+
+			return dblk;
+		}
+	}
 
 	/** Must use a backing file */
 	private DataStore() { }
 
 	/**
 	 * Build a datastore object, open a channel and buffer to the backing
-	 * file.
+	 * file. This sets the worker pool and work queue to a default constant
+	 * that is set at compile time.
 	 * @param path Path Path to backing file.
 	 */
 	public DataStore(Path path)
 		throws FileNotFoundException, IOException
 	{
 		super(path);
+
+		/*
+		 * Create a bounded work queue for submissions of store jobs.
+		 * If the queue size is reached in the wqueue, then the calling
+		 * Thread itself will perform the task.
+		 */
+		this.wqueue = new ArrayBlockingQueue<Runnable>(DEFAULT_WORKQ_SIZE);
+		this.wpool = new ThreadPoolExecutor(DEFAULT_WORKER_COUNT, // Core Pool Size
+						    DEFAULT_WORKER_COUNT, // Max Pool Size
+						    Long.MAX_VALUE,
+						    TimeUnit.SECONDS,
+						    wqueue,
+						    new ThreadPoolExecutor.CallerRunsPolicy());
 	}
 
 	/**
@@ -68,9 +138,8 @@ class DataStore
 		/* Translate to correct byte offset */
 		blkaddr = didx * DATA_BLOCK_SIZE;
 		buffer = this.getChannel().map(FileChannel.MapMode.READ_WRITE,
-				    DATA_BLOCK_SIZE,
-				    blkaddr);
-
+					       blkaddr,
+					       DATA_BLOCK_SIZE);
 		return buffer;
 	}
 	
@@ -84,9 +153,8 @@ class DataStore
 	public Future<DataBlock> insert(byte[] key, byte[] blk)
 		throws IOException
 	{
+		Callable<DataBlock> dcall;
 		ByteBuffer kbuf;
-		ByteBuffer blkbuf;
-		byte[] iblkdat;
 		long blkn;
 
 		if(key.length != HrfsDisk.LONGSZ)
@@ -97,12 +165,9 @@ class DataStore
 		/* XXX Not ideal, but until we make an object based store */
 		kbuf = ByteBuffer.wrap(key);
 		blkn = kbuf.getLong();
+		dcall = new InsertCallback(blkn, blk);
 
-		/* Retrieve a mapping to disk, flush data buffer */
-		blkbuf = getDataBlockMap(blkn);
-		blkbuf.put(blk, 0, DATA_BLOCK_SIZE);
-
-		return null;
+		return wpool.submit(dcall);
 	}
 
 	/**

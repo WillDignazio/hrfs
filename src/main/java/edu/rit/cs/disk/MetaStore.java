@@ -103,7 +103,6 @@ class MetaStore
 
 		/* Get the relative block number */
 		rblkn = byteoff % METADATA_EXTENT_SIZE;
-		System.out.println("Requested mblock " + rblkn + " from extent " + mextn);
 
 		return ext.getMetadataBlocks().get(rblkn);
 	}
@@ -163,7 +162,6 @@ class MetaStore
 	public synchronized Future<MetadataBlock> insert(byte[] key, byte[] data)
 		throws IOException
 	{
-		System.out.println("Inserting key: " + new String(key));
 		long blkidx;
 
 		if(key.length != METADATA_KEY_SIZE)
@@ -215,8 +213,6 @@ class MetaStore
 		ByteBuffer mbuf;
 		SuperBlock sblock;
 
-		System.out.println("Retrieving metastore superblock from channel: " +
-				   this.getChannel().toString());
 		mbuf = this.getChannel().map(FileChannel.MapMode.READ_WRITE, 0,
 					     SuperBlock.SUPERBLOCK_SIZE).load();
 
