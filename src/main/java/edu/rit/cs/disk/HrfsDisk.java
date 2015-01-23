@@ -38,6 +38,7 @@
 package edu.rit.cs.disk;
 
 import java.util.Random;
+import java.util.concurrent.Future;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
@@ -50,7 +51,7 @@ import java.io.RandomAccessFile;
 import java.io.IOException;
 
 public class HrfsDisk
-	extends BlockStore
+	extends BlockStore<DataBlock>
 {
 	public static final int LONGSZ = (Long.SIZE / Byte.SIZE);
 
@@ -98,12 +99,11 @@ public class HrfsDisk
 	 * @return success Whether insertion was successful
 	 */
 	@Override
-	public boolean insert(byte[] key, byte[] data)
+	public Future<DataBlock> insert(byte[] key, byte[] data)
 		throws IOException
 	{
 		System.out.println("Inserting: " + key.toString());
-
-		return false;
+		return null;
 	}
 
 	/**
@@ -111,10 +111,11 @@ public class HrfsDisk
 	 * @param key Key for block of data.
 	 * @return data Block of data.
 	 */
-	public byte[] get(byte[] key)
+	@Override
+	public Future<DataBlock> get(byte[] key)
 		throws IOException
 	{
-		return new byte[1];
+		return null;
 	}
 
 	/**
@@ -123,10 +124,10 @@ public class HrfsDisk
 	 * @return Whether removal was successful
 	 */
 	@Override
-	public boolean remove(byte[] key)
+	public Future<Boolean> remove(byte[] key)
 		throws IOException
 	{
-		return false;
+		return null;
 	}
 	
 	public static void main(String[] args)

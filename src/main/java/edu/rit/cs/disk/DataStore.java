@@ -11,6 +11,7 @@
  */
 package edu.rit.cs.disk;
 
+import java.util.concurrent.Future;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
@@ -22,7 +23,7 @@ import java.io.RandomAccessFile;
 import java.io.IOException;
 
 class DataStore
-	extends BlockStore
+	extends BlockStore<DataBlock>
 {
 	public static final int DATA_BLOCK_SIZE		= 1024*64; // 64 kib
 
@@ -80,17 +81,18 @@ class DataStore
 	 * @return success Whether insertion was successful.
 	 */
 	@Override
-	public boolean insert(byte[] key, byte[] data)
+	public Future<DataBlock> insert(byte[] key, byte[] blk)
 		throws IOException
 	{
 		ByteBuffer kbuf;
 		ByteBuffer blkbuf;
+		byte[] iblkdat;
 		long blkn;
 
 		if(key.length != HrfsDisk.LONGSZ)
-			throw new IOException("Invalid Key Size");
-		if(data.length != DATA_BLOCK_SIZE)
-			throw new IOException("Invalid Block Size");
+			throw new IllegalArgumentException("Invalid Key Size");
+		if(blk.length != DATA_BLOCK_SIZE)
+			throw new IllegalArgumentException("Invalid Block Size");
 
 		/* XXX Not ideal, but until we make an object based store */
 		kbuf = ByteBuffer.wrap(key);
@@ -98,9 +100,9 @@ class DataStore
 
 		/* Retrieve a mapping to disk, flush data buffer */
 		blkbuf = getDataBlockMap(blkn);
-		blkbuf.put(data, 0, data.length);
+		blkbuf.put(blk, 0, DATA_BLOCK_SIZE);
 
-		return true;
+		return null;
 	}
 
 	/**
@@ -109,10 +111,10 @@ class DataStore
 	 * @return data Block of data
 	 */
 	@Override
-	public byte[] get(byte[] key)
+	public Future<DataBlock> get(byte[] key)
 		throws IOException
 	{
-		return new byte[1];
+		return null;
 	}
 
 	/**
@@ -121,9 +123,9 @@ class DataStore
 	 * @return Whether removal was successful
 	 */
 	@Override
-	public boolean remove(byte[] key)
+	public Future<Boolean> remove(byte[] key)
 		throws IOException
 	{
-		return false;
+		return null;
 	}
 }

@@ -15,15 +15,15 @@ package edu.rit.cs.disk;
 import java.util.Arrays;
 import java.nio.ByteBuffer;
 
-class MetadataBlock
+final class MetadataBlock
+	extends Block
 {
 	private static final int KEY_OFFSET = 0;
 	private static final int LOCATION_OFFSET = MetaStore.METADATA_KEY_SIZE;
 	private static final int NEXT_OFFSET = LOCATION_OFFSET + (Long.SIZE / Byte.SIZE);
 	private static final int LEFT_OFFSET = NEXT_OFFSET + (Long.SIZE / Byte.SIZE);
 	private static final int RIGHT_OFFSET = LEFT_OFFSET + (Long.SIZE / Byte.SIZE);
-	
-	private ByteBuffer mbuf;
+
 	private int mxn;
 	private int offset;
 
@@ -31,16 +31,27 @@ class MetadataBlock
 	 * In memory object for metadata block of mapped region, when
 	 * given the number within the extent, this will calculate the
 	 * offsets for the set and get methods.
-	 * @param mbuf Parent byte buffer
-	 * @param mxn Metadata block number
+	 * @param buffer Parent byte buffer
+	 * @param mxn Metadata block number within extent
 	 */
-	public MetadataBlock(ByteBuffer mbuf, int mxn)
+	public MetadataBlock(ByteBuffer buffer, int mxn)
 	{
-		this.mbuf = mbuf;
+		super(buffer);
+
 		this.mxn = mxn;
 		this.offset = mxn * MetaStore.METADATA_BLOCK_SIZE;
 	}
 
+	/**
+	 * Returns the size of this block in bytes.
+	 * @return nbytes Block size in bytes
+	 */
+	@Override
+	public long size()
+	{
+		return MetaStore.METADATA_BLOCK_SIZE;
+	}
+	
 	/**
 	 * If the metadata block has a non-zero'd key, we consider it
 	 * to be unallocated, or unused.
@@ -49,7 +60,7 @@ class MetadataBlock
 	public boolean isAllocated()
 	{
 		for(int b=0; b < MetaStore.METADATA_KEY_SIZE; ++b)
-			if(mbuf.get(b) != 0)
+			if(this.getBuffer().get(b) != 0)
 				return true;
 
 		return false;
@@ -66,7 +77,7 @@ class MetadataBlock
 	{
 		byte[] cregion;
 
-		cregion = Arrays.copyOfRange(this.mbuf.array(), offset,
+		cregion = Arrays.copyOfRange(this.getBuffer().array(), offset,
 					     offset + KEY_OFFSET);
 		return cregion;
 	}
@@ -78,7 +89,7 @@ class MetadataBlock
 	public void setKey(byte[] key)
 	{
 		for(int b=0; b < MetaStore.METADATA_KEY_SIZE; ++b)
-			this.mbuf.put(offset+KEY_OFFSET+b, key[b]);
+			this.getBuffer().put(offset+KEY_OFFSET+b, key[b]);
 	}
 
 	/**
@@ -87,7 +98,7 @@ class MetadataBlock
 	 */
 	public void setDataBlockLocation(long locptr)
 	{
-		this.mbuf.putLong(offset + LOCATION_OFFSET, locptr);
+		this.getBuffer().putLong(offset + LOCATION_OFFSET, locptr);
 	}
 
 	/**
@@ -96,7 +107,7 @@ class MetadataBlock
 	 */
 	public long getDataBlockLocation()
 	{
-		return this.mbuf.getLong(offset + LOCATION_OFFSET);
+		return this.getBuffer().getLong(offset + LOCATION_OFFSET);
 	}
 
 	/**
@@ -106,7 +117,7 @@ class MetadataBlock
 	 */
 	public void setNextBlockLocation(long ptr)
 	{
-		this.mbuf.putLong(offset + NEXT_OFFSET, ptr);
+		this.getBuffer().putLong(offset + NEXT_OFFSET, ptr);
 	}
 
 	/**
@@ -116,7 +127,7 @@ class MetadataBlock
 	 */
 	public long getNextBlockLocation()
 	{
-		return this.mbuf.getLong(offset + NEXT_OFFSET);
+		return this.getBuffer().getLong(offset + NEXT_OFFSET);
 	}
 
 	/**
@@ -126,7 +137,7 @@ class MetadataBlock
 	 */
 	public void setLeftBlockLocation(long ptr)
 	{
-		this.mbuf.putLong(offset + LEFT_OFFSET, ptr);
+		this.getBuffer().putLong(offset + LEFT_OFFSET, ptr);
 	}
 
 	/**
@@ -136,7 +147,7 @@ class MetadataBlock
 	 */
 	public long getLeftBlockLocation()
 	{
-		return this.mbuf.getLong(offset + LEFT_OFFSET);
+		return this.getBuffer().getLong(offset + LEFT_OFFSET);
 	}
 
 	/**
@@ -146,7 +157,7 @@ class MetadataBlock
 	 */
 	public void setRightBlockLocation(long ptr)
 	{
-		this.mbuf.putLong(offset + RIGHT_OFFSET, ptr);
+		this.getBuffer().putLong(offset + RIGHT_OFFSET, ptr);
 	}
 	
 	/**
@@ -156,6 +167,6 @@ class MetadataBlock
 	 */
 	public long getRightBlockLocation()
 	{
-		return this.mbuf.getLong(offset + RIGHT_OFFSET);
+		return this.getBuffer().getLong(offset + RIGHT_OFFSET);
 	}
 }

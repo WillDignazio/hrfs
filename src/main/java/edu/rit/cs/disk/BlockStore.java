@@ -2,14 +2,15 @@
  * Copyright © 2015
  * Hadoop Replicating File System
  *
- * Interface that allows a running hrfs instance to store
- * blocks on disk, and likewise retrieve them.
+ * Abstract class that allows a running hrfs instance to store blocks on disk,
+ * and likewise retrieve them.
  *
  * @file BlockStore.java
  * @author Will Dignazio <wdignazio@gmail.com>
  */
 package edu.rit.cs.disk;
 
+import java.util.concurrent.Future;
 import java.nio.channels.FileChannel;
 import java.nio.file.LinkOption;
 import java.nio.file.Files;
@@ -18,11 +19,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-public abstract class BlockStore
+public abstract class BlockStore<T extends Block>
 {
-	private Path _path;
 	private RandomAccessFile _file;
 	private FileChannel _channel;
+	private Path _path;
 	private long _size;
 	
 	/**
@@ -52,7 +53,7 @@ public abstract class BlockStore
 		this._channel = _file.getChannel();
 		this._size = _file.length();
 	}
-	
+
 	/**
 	 * Format the block storage such that no data appears to be in it.
 	 * Implementors of this function shall not allow blocks previous to 
@@ -67,7 +68,7 @@ public abstract class BlockStore
 	 * @param blk Block of data
 	 * @return success Whether insertion was successful
 	 */
-	public abstract boolean insert(byte[] key, byte[] data)
+	public abstract Future<T> insert(byte[] key, byte[] blk)
 		throws IOException;
 
 	/**
@@ -75,7 +76,7 @@ public abstract class BlockStore
 	 * @param key Key for block
 	 * @return data Block of data
 	 */
-	public abstract byte[] get(byte[] key)
+	public abstract Future<T> get(byte[] key)
 		throws IOException;
 
 	/**
@@ -83,14 +84,14 @@ public abstract class BlockStore
 	 * @param key Block key
 	 * @return Whether removal was successful
 	 */
-	public abstract boolean remove(byte[] key)
+	public abstract Future<Boolean> remove(byte[] key)
 		throws IOException;
 
 	/**
 	 * Gets the channel to the backing file or device of this store.
 	 * @return channel Channel to file or device.
 	 */
-	public FileChannel getChannel() { return this._channel; }
+	protected FileChannel getChannel() { return this._channel; }
 
 	/**
 	 * Gets the size in bytes of this block storage.

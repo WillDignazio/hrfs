@@ -10,6 +10,7 @@
 package edu.rit.cs.disk;
 
 import org.apache.commons.lang.StringUtils;
+import java.util.concurrent.Future;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
@@ -21,11 +22,11 @@ import java.io.IOException;
 import java.util.List;
 
 class MetaStore
-	extends BlockStore
+	extends BlockStore<MetadataBlock>
 {
+	public static final int METADATA_BLOCK_SIZE = 64;
 	public static final int METADATA_EXTENT_SIZE	= 4096;
 	public static final int METADATA_KEY_SIZE	= 20;
-	public static final int METADATA_BLOCK_SIZE	= 64;
 
 	private SuperBlock sb;
 
@@ -159,16 +160,16 @@ class MetaStore
 	 * @return whether the object was stored on disk
 	 */
 	@Override
-	public synchronized boolean insert(byte[] key, byte[] data)
+	public synchronized Future<MetadataBlock> insert(byte[] key, byte[] data)
 		throws IOException
 	{
 		System.out.println("Inserting key: " + new String(key));
 		long blkidx;
 
 		if(key.length != METADATA_KEY_SIZE)
-			throw new IOException("Invalid Key Size");
+			throw new IllegalArgumentException("Invalid Key Size");
 		if(data.length != METADATA_BLOCK_SIZE)
-			throw new IOException("Invalid Block Size");
+			throw new IllegalArgumentException("Invalid Block Size");
 		
 		/* Check if first node */
 		blkidx = _mext_idx;
@@ -177,7 +178,7 @@ class MetaStore
 			
 		}
 
-		return false;
+		return null;
 	}
 
 	/**
@@ -186,10 +187,10 @@ class MetaStore
 	 * @return val Value for metadata object.
 	 */
 	@Override
-	public synchronized byte[] get(byte[] key)
+	public Future<MetadataBlock> get(byte[] key)
 		throws IOException
 	{
-		return new byte[1];
+		return null;
 	}
 
 	/**
@@ -198,10 +199,10 @@ class MetaStore
 	 * @return Whether block was removed.
 	 */
 	@Override
-	public synchronized boolean remove(byte[] key)
+	public Future<Boolean> remove(byte[] key)
 		throws IOException
 	{
-		return false;
+		return null;
 	}
 
 	/**
