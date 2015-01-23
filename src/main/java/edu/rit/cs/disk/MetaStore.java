@@ -31,7 +31,6 @@ class MetaStore
 	private Path mPath;
 	private RandomAccessFile mFile;
 	private FileChannel mChannel;
-	private long rootBlkAddr;
 	private SuperBlock sb;
 
 	/*
@@ -57,9 +56,6 @@ class MetaStore
 		throws FileNotFoundException, IOException
 	{
 		this.mPath = path;
-
-		if(Files.notExists(mPath, LinkOption.NOFOLLOW_LINKS))
-			throw new FileNotFoundException(mPath.toString());
 
 		this.mFile = new RandomAccessFile(mPath.toFile(), "rw");
 		this.mChannel = mFile.getChannel();
@@ -182,7 +178,6 @@ class MetaStore
 		blkidx = _mext_idx;
 		if(blkidx == 0) {
 			System.out.println("First node in tree...");
-
 			
 		}
 

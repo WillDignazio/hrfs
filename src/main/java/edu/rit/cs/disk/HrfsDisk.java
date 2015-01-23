@@ -53,7 +53,6 @@ public class HrfsDisk
 	implements HrfsBlockStore
 {
 	public static final int LONGSZ = (Long.SIZE / Byte.SIZE);
-	public static final int DATA_BLOCK_SIZE		= 1024*64; // 64 kib
 
 	private Path mblkPath;
 	private Path dblkPath;
@@ -61,6 +60,7 @@ public class HrfsDisk
 
 	private SuperBlock sb;
 	private MetaStore metastore;
+	private DataStore datastore;
 
 	/** No default constructor */
 	private HrfsDisk() { }
@@ -78,11 +78,15 @@ public class HrfsDisk
 		if(Files.notExists(dblkPath, LinkOption.NOFOLLOW_LINKS))
 			throw new FileNotFoundException(dblkPath.toString());
 
+		if(Files.notExists(mblkPath, LinkOption.NOFOLLOW_LINKS))
+			throw new FileNotFoundException(mblkPath.toString());
+
 		this.mblkPath = mblkPath;
 		this.dblkPath = dblkPath;
 		this.dChannel = new RandomAccessFile(dblkPath.toFile(), "rw").getChannel();
 
 		this.metastore = new MetaStore(mblkPath);
+		this.datastore = new DataStore(dblkPath);
 	}
 
 	/**
@@ -118,7 +122,7 @@ public class HrfsDisk
 		 * of block data. This is until we have a working data
 		 * block allocator.
 		 */
-		mins = metastore.insert(key, new byte[DATA_BLOCK_SIZE]);
+		mins = metastore.insert(key, new byte[DataStore.DATA_BLOCK_SIZE]);
 
 		return mins;
 	}
@@ -156,7 +160,7 @@ public class HrfsDisk
 
 		rand = new Random();
 
-		dbuf = new byte[HrfsDisk.DATA_BLOCK_SIZE];
+		dbuf = new byte[DataStore.DATA_BLOCK_SIZE];
 		k1 = new byte[20];
 
 		rand.nextBytes(dbuf);

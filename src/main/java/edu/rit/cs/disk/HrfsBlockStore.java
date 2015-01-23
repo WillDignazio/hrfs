@@ -32,7 +32,7 @@ public interface HrfsBlockStore
 		throws IOException;
 
 	/**
-	 * Get a block data from the storage unit.
+	 * Get a block of data from the storage unit.
 	 * @param key Key for block
 	 * @return data Block of data
 	 */
