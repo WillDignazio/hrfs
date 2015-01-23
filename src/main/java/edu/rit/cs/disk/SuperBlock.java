@@ -6,9 +6,9 @@
  * the top level node for the on disk tree structure.
  *
  * On disk format:
- * 0         8      16       24       32         40                            4K
+ * 0         8      16       24       32         40       48                   4K
  * +----------------------------------------------------------------------------+
- * | RootBlk | WrIdx | MWrIdx | BlkCnt | BlkAvail |        Unallocated          |
+ * | DblkIdx | MdIdx | BlkCnt | BlkAvail | Mroot  |  Magic | Unallocated        |
  * +----------------------------------------------------------------------------+
  *
  * @file SuperBlock.java
@@ -26,6 +26,7 @@ class SuperBlock
 	private static final int META_AVAIL_OFFSET = META_COUNT_OFFSET + HrfsDisk.LONGSZ;
 	private static final int META_ROOT_OFFSET = META_AVAIL_OFFSET + HrfsDisk.LONGSZ;
 
+	public static final int SUPERBLOCK_OFFSET = META_ROOT_OFFSET + HrfsDisk.LONGSZ;
 	public static final int SUPERBLOCK_SIZE = 4096;
 	public static final int SUPER_MAGIC = 0xCAFEBABE;
 

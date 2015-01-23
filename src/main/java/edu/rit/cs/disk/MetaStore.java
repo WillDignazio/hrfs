@@ -182,6 +182,8 @@ class MetaStore
 		blkidx = _mext_idx;
 		if(blkidx == 0) {
 			System.out.println("First node in tree...");
+
+			
 		}
 
 		return false;
