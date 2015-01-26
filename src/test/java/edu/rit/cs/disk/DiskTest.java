@@ -69,12 +69,17 @@ public class DiskTest
 		throws IOException
 	{
 		HrfsDisk hdisk;
-		String fname;
+		String mname;
+		String dname;
 
 		// 10mb test file
-		fname = createRandomTestFile(1024*1024*10, "rw");
-		hdisk = new HrfsDisk(Paths.get(fname));
+		dname = createRandomTestFile(1024*1024*10, "rw");
+		mname = createRandomTestFile(1024*1024*1, "rw");
+		
+		hdisk = new HrfsDisk(Paths.get(mname), Paths.get(dname));
+		hdisk.close();
 
-		new File(fname).delete();
+		new File(dname).delete();
+		new File(mname).delete();
 	}
 }
