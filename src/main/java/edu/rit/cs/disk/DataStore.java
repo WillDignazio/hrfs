@@ -11,6 +11,7 @@
  */
 package edu.rit.cs.disk;
 
+import org.apache.commons.lang.NotImplementedException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -183,9 +184,7 @@ class DataStore
 	@Override
 	public Future<DataBlock> get(byte[] key)
 		throws IOException
-	{
-		return null;
-	}
+	{ throw new NotImplementedException(); }
 
 	/**
 	 * Remove a block of data from the store.

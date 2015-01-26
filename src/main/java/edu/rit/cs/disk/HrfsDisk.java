@@ -37,6 +37,7 @@
  */
 package edu.rit.cs.disk;
 
+import org.apache.commons.lang.NotImplementedException;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.concurrent.Future;
@@ -129,9 +130,7 @@ public class HrfsDisk
 	@Override
 	public Future<DataBlock> get(byte[] key)
 		throws IOException
-	{
-		return null;
-	}
+	{ throw new NotImplementedException(); }
 
 	/**
 	 * Removes a block of data from the on disk storage.
@@ -141,9 +140,7 @@ public class HrfsDisk
 	@Override
 	public Future<Boolean> remove(byte[] key)
 		throws IOException
-	{
-		return null;
-	}
+	{ throw new NotImplementedException(); }
 
 	/**
 	 * Close this Hrfs primary block store.

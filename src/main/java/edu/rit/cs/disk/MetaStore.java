@@ -9,6 +9,7 @@
  */
 package edu.rit.cs.disk;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.concurrent.ConcurrentUtils;
 import java.util.concurrent.Future;
@@ -209,9 +210,8 @@ class MetaStore
 	@Override
 	public Future<MetadataBlock> get(byte[] key)
 		throws IOException
-	{
-		return null;
-	}
+	{ throw new NotImplementedException(); }
+
 
 	/**
 	 * Remove a metadata block object from storage.
@@ -221,9 +221,8 @@ class MetaStore
 	@Override
 	public Future<Boolean> remove(byte[] key)
 		throws IOException
-	{
-		return null;
-	}
+	{ throw new NotImplementedException(); }
+
 
 	/**
 	 * Gets the superblock of the on disk structure.
