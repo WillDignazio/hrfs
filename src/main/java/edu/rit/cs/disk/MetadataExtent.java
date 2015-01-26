@@ -24,7 +24,7 @@ class MetadataExtent
 	 * @param buf Mapped buffer region.
 	 * @param exn Extent number on disk
 	 */
-	public MetadataExtent(ByteBuffer mbuf, int exn)
+	public MetadataExtent(ByteBuffer mbuf, long exn)
 	{
 		this.mbuf = mbuf;
 		this.exn = exn;

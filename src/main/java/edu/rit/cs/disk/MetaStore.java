@@ -10,7 +10,9 @@
 package edu.rit.cs.disk;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.concurrent.ConcurrentUtils;
 import java.util.concurrent.Future;
+import java.util.Arrays;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
@@ -25,9 +27,10 @@ class MetaStore
 	extends BlockStore<MetadataBlock>
 {
 	public static final int METADATA_BLOCK_SIZE = 64;
-	public static final int METADATA_EXTENT_SIZE	= 4096;
-	public static final int METADATA_KEY_SIZE	= 20;
-
+	public static final int METADATA_EXTENT_SIZE = 4096;
+	public static final int METADATA_KEY_SIZE = 20;
+	private static final byte[] METADATA_NULL_KEY = new byte[METADATA_KEY_SIZE];
+	
 	private SuperBlock sb;
 
 	/*
@@ -64,7 +67,7 @@ class MetaStore
 	 * @param exn Extent number
 	 * @return mbuf ByteBuffer of extent
 	 */
-	private MetadataExtent getMetadataExtent(int exn)
+	private MetadataExtent getMetadataExtent(long exn)
 		throws IOException
 	{
 		MetadataExtent ext;
@@ -84,14 +87,14 @@ class MetaStore
 	 * Retrieve the metadata block as an index from disk.
 	 * @param bxn Block index number
 	 */
-	private MetadataBlock getMetadataBlock(int bxn)
+	private MetadataBlock getMetadataBlock(long bxn)
 		throws IOException
 	{
 		MetadataBlock mblk;
 		MetadataExtent ext;
 		List<MetadataBlock> extblks;
-		int byteoff;
-		int mextn;
+		long byteoff;
+		long mextn;
 		int rblkn;
 
 		/* Translate to extent block belongs to. */
@@ -102,7 +105,7 @@ class MetaStore
 		extblks = ext.getMetadataBlocks();
 
 		/* Get the relative block number */
-		rblkn = byteoff % METADATA_EXTENT_SIZE;
+		rblkn = (int)(byteoff % METADATA_EXTENT_SIZE);
 
 		return ext.getMetadataBlocks().get(rblkn);
 	}
@@ -162,20 +165,37 @@ class MetaStore
 	public synchronized Future<MetadataBlock> insert(byte[] key, byte[] data)
 		throws IOException
 	{
+		MetadataBlock mblk;
+		ByteBuffer locbuf;
 		long blkidx;
+		long blkaddr;
 
 		if(isClosed() == true)
 			throw new IOException("MetaStore is closed");
 
 		if(key.length != METADATA_KEY_SIZE)
 			throw new IllegalArgumentException("Invalid Key Size");
-		if(data.length != METADATA_BLOCK_SIZE)
+		if(data.length != HrfsDisk.LONGSZ) // Pointer size for address
 			throw new IllegalArgumentException("Invalid Block Size");
-		
+
 		/* Check if first node */
+		System.out.println("_mext_idx: " + _mext_idx);
 		blkidx = _mext_idx;
+		mblk = getMetadataBlock(blkidx);
+
 		if(blkidx == 0) {
-			System.out.println("First node in tree...");
+			System.out.println("Inserting root mblock");
+			if(Arrays.equals(mblk.getKey(), METADATA_NULL_KEY) == false)
+				throw new IOException("Root object filled, _mextidx == 0");
+
+			/* Set new block attributes */
+			locbuf = ByteBuffer.wrap(data);
+			blkaddr = locbuf.getLong();
+			mblk.setDataBlockLocation(blkaddr);
+			mblk.setKey(key);
+
+			/* XXX Serialized for now */
+			return ConcurrentUtils.constantFuture(mblk);
 		}
 
 		return null;

@@ -101,9 +101,23 @@ public class HrfsDisk
 	public Future<DataBlock> insert(byte[] key, byte[] data)
 		throws IOException
 	{
-		System.out.println("Inserting: " + key.toString());
+		Future<MetadataBlock> future;
+		MetadataBlock mblock;
 
+		System.out.println("Inserting: " + key.toString());
 		byte[] tb = new byte[LONGSZ];
+
+		try {
+			future = metastore.insert(key, tb);
+			mblock = future.get();
+		}
+		catch(InterruptedException e) {
+			return null;
+		}
+		catch(ExecutionException e) {
+			return null;
+		}
+
 		return datastore.insert(tb, data);
 	}
 
