@@ -75,10 +75,15 @@ final class MetadataBlock
 	 */
 	public byte[] getKey()
 	{
+		ByteBuffer ebuf;
 		byte[] cregion;
 
-		cregion = Arrays.copyOfRange(this.getBuffer().array(), offset,
-					     offset + KEY_OFFSET);
+		cregion = new byte[MetaStore.METADATA_KEY_SIZE];
+
+		/* XXX Needs to be optimized */
+		for(int k=0; k < MetaStore.METADATA_KEY_SIZE; ++k)
+			cregion[k] = getBuffer().get(offset + KEY_OFFSET + k);
+
 		return cregion;
 	}
 
@@ -89,7 +94,7 @@ final class MetadataBlock
 	public void setKey(byte[] key)
 	{
 		for(int b=0; b < MetaStore.METADATA_KEY_SIZE; ++b)
-			this.getBuffer().put(offset+KEY_OFFSET+b, key[b]);
+			this.getBuffer().put(offset + KEY_OFFSET+b, key[b]);
 	}
 
 	/**

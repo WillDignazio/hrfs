@@ -77,7 +77,7 @@ class MetaStore
 
 		exaddr = METADATA_EXTENT_SIZE * exn;
 		mbuf = this.getChannel().map(FileChannel.MapMode.READ_WRITE,
-					     SuperBlock.SUPERBLOCK_SIZE,
+					     SuperBlock.SUPERBLOCK_SIZE, // Base address
 					     exaddr + METADATA_EXTENT_SIZE).load();
 
 		ext = new MetadataExtent(mbuf, exn);
