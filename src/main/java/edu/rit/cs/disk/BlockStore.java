@@ -25,6 +25,7 @@ public abstract class BlockStore<T extends Block>
 	private FileChannel _channel;
 	private Path _path;
 	private long _size;
+	private boolean _closed;
 	
 	/**
 	 * Produce a default store with uninitialized values.
@@ -35,6 +36,7 @@ public abstract class BlockStore<T extends Block>
 		this._file = null;
 		this._channel = null;
 		this._size = 0;
+		this._closed = false;
 	}
 
 	/**
@@ -52,6 +54,7 @@ public abstract class BlockStore<T extends Block>
 		this._file = new RandomAccessFile(_path.toFile(), "rw");
 		this._channel = _file.getChannel();
 		this._size = _file.length();
+		this._closed = false;
 	}
 
 	/**
@@ -88,6 +91,17 @@ public abstract class BlockStore<T extends Block>
 		throws IOException;
 
 	/**
+	 * Close the store, making any more insertions, removals, or get calls
+	 * to fail. This will shutdown any IO transactions active, and return
+	 * when the store has safely been closed.
+	 */
+	public void close()
+		throws IOException
+	{
+		this._closed = true;
+	}
+	
+	/**
 	 * Gets the channel to the backing file or device of this store.
 	 * @return channel Channel to file or device.
 	 */
@@ -98,4 +112,9 @@ public abstract class BlockStore<T extends Block>
 	 * @return size Size in bytes.
 	 */
 	public long size() { return this._size; }
+
+	/**
+	 * Returns whether the store has closed.
+	 */
+	public boolean isClosed() { return this._closed; }
 }

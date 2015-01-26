@@ -159,6 +159,9 @@ class DataStore
 		ByteBuffer kbuf;
 		long blkn;
 
+		if(isClosed() == true)
+			throw new IOException("Store is closed");
+		
 		if(key.length != HrfsDisk.LONGSZ)
 			throw new IllegalArgumentException("Invalid Key Size");
 		if(blk.length != DATA_BLOCK_SIZE)
@@ -195,4 +198,16 @@ class DataStore
 	{
 		return null;
 	}
+
+	/**
+	 * Close this block store.
+	 */
+	@Override
+	public void close()
+		throws IOException
+	{
+		super.close();
+		this.wpool.shutdown();
+	}
+			
 }

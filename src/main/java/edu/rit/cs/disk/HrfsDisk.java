@@ -130,6 +130,21 @@ public class HrfsDisk
 	{
 		return null;
 	}
+
+	/**
+	 * Close this Hrfs primary block store.
+	 */
+	@Override
+	public synchronized void close()
+		throws IOException
+	{
+		if(isClosed())
+			throw new IOException("Store already closed");
+
+		super.close();
+		this.datastore.close();
+		this.metastore.close();
+	}
 	
 	public static void main(String[] args)
 		throws InterruptedException, ExecutionException
@@ -153,6 +168,8 @@ public class HrfsDisk
 
 			future = disk.insert(dkey, dbuf);
 			future.get();
+
+			disk.close();
 		}
 		catch(FileNotFoundException e) {
 			System.err.println("Test file not present: " + e.toString());

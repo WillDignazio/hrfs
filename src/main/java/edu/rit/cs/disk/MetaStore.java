@@ -164,6 +164,9 @@ class MetaStore
 	{
 		long blkidx;
 
+		if(isClosed() == true)
+			throw new IOException("MetaStore is closed");
+
 		if(key.length != METADATA_KEY_SIZE)
 			throw new IllegalArgumentException("Invalid Key Size");
 		if(data.length != METADATA_BLOCK_SIZE)
@@ -173,7 +176,6 @@ class MetaStore
 		blkidx = _mext_idx;
 		if(blkidx == 0) {
 			System.out.println("First node in tree...");
-			
 		}
 
 		return null;
