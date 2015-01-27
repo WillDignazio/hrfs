@@ -12,11 +12,18 @@
  */
 package edu.rit.cs.disk;
 
+import com.google.common.primitives.UnsignedBytes;
+import org.apache.hadoop.io.Writable;
+import java.util.Comparator;
 import java.util.Arrays;
 import java.nio.ByteBuffer;
+import java.io.IOException;
+import java.io.DataOutput;
+import java.io.DataInput;
 
 final class MetadataBlock
 	extends Block
+	implements Comparable<MetadataBlock>
 {
 	private static final int KEY_OFFSET = 0;
 	private static final int LOCATION_OFFSET = MetaStore.METADATA_KEY_SIZE;
@@ -24,24 +31,57 @@ final class MetadataBlock
 	private static final int LEFT_OFFSET = NEXT_OFFSET + (Long.SIZE / Byte.SIZE);
 	private static final int RIGHT_OFFSET = LEFT_OFFSET + (Long.SIZE / Byte.SIZE);
 
-	private int mxn;
+	private int bxn;
 	private int offset;
+	private MetadataExtent parent;
+
+	public static class BlockComparator
+		implements Comparator<MetadataBlock>
+	{
+		@Override
+		public int compare(MetadataBlock b1, MetadataBlock b2)
+		{
+			/* XXX Ugly hack wrapper */
+			Comparator<byte[]> comparator;
+			comparator = UnsignedBytes.lexicographicalComparator();
+			return comparator.compare(b1.getKey(), b2.getKey());
+		}
+
+		@Override
+		public boolean equals(Object obj)
+		{
+			if(obj instanceof MetadataBlock)
+				return true;
+
+			return false;
+		}
+	}
 
 	/**
 	 * In memory object for metadata block of mapped region, when
 	 * given the number within the extent, this will calculate the
 	 * offsets for the set and get methods.
-	 * @param buffer Parent byte buffer
-	 * @param mxn Metadata block number within extent
+	 * @param mext Parent metadata extent
+	 * @param bxn Metadata block number within extent
 	 */
-	public MetadataBlock(ByteBuffer buffer, int mxn)
+	public MetadataBlock(MetadataExtent mext, int bxn)
 	{
-		super(buffer);
+		super(mext.copyBuffer().duplicate());
 
-		this.mxn = mxn;
-		this.offset = mxn * MetaStore.METADATA_BLOCK_SIZE;
+		this.parent = mext;
+		this.bxn = bxn;
+		this.offset = bxn * MetaStore.METADATA_BLOCK_SIZE;
 	}
 
+	/**
+	 * Get a comparator for metadata blocks.
+	 * @return Static comparator reference.
+	 */
+	public static BlockComparator getComparator()
+	{
+		return new BlockComparator();
+	}
+	
 	/**
 	 * Returns the size of this block in bytes.
 	 * @return nbytes Block size in bytes
@@ -173,5 +213,29 @@ final class MetadataBlock
 	public long getRightBlockLocation()
 	{
 		return this.getBuffer().getLong(offset + RIGHT_OFFSET);
+	}
+
+	/**
+	 * Get the extent that this block was create from.
+	 * @return mext Parent metadata extent
+	 */
+	public MetadataExtent getParentExtent()
+	{
+		return this.parent;
+	}
+
+	/**
+	 * Comparison method for the metadata block, uses the entirety of the
+	 * key value to determine it's order compared to another block.
+	 * @param blk Metadata block to compare to
+	 * @return cmp <|>|= 0 Comparison of blocks
+	 */
+	@Override
+	public int compareTo(MetadataBlock blk)
+	{
+		Comparator<byte[]> comparator;
+
+		comparator = UnsignedBytes.lexicographicalComparator();
+		return comparator.compare(this.getKey(), blk.getKey());
 	}
 }

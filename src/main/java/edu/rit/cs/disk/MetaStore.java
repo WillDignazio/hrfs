@@ -12,17 +12,23 @@ package edu.rit.cs.disk;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.concurrent.ConcurrentUtils;
+import com.google.common.primitives.UnsignedBytes;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.ImmutableList;
 import java.util.concurrent.Future;
+import java.util.Comparator;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.RandomAccessFile;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
 
 class MetaStore
 	extends BlockStore<MetadataBlock>
@@ -44,6 +50,7 @@ class MetaStore
 	 */
 	private long _mext_idx;		// Metadata Extent Allocation Index
 	private long _dblk_idx;		// Data Block Allocation Index
+	private long _root_idx;		// Root data block Index
 
 	/** Must use a file */
 	private MetaStore() { }
@@ -59,7 +66,8 @@ class MetaStore
 		super(path);
 
 		this.sb = getSuperBlock();
-		this._mext_idx = sb.getMetadataBlockIndex();
+		this._mext_idx = sb.getMetadataExtentIndex();
+		this._root_idx = sb.getMetadataRootIndex();
 		this._dblk_idx = sb.getDataBlockIndex();
 	}
 
@@ -93,7 +101,7 @@ class MetaStore
 	{
 		MetadataBlock mblk;
 		MetadataExtent ext;
-		List<MetadataBlock> extblks;
+		LinkedList<MetadataBlock> extblks;
 		long byteoff;
 		long mextn;
 		int rblkn;
@@ -150,10 +158,59 @@ class MetaStore
 			METADATA_BLOCK_SIZE;
 
 		sb.setDataBlockIndex(0);
-		sb.setMetadataBlockIndex(0);
+		sb.setMetadataExtentIndex(0);
+		sb.setMetadataRootIndex(0);
 		sb.setMetadataBlockCount(mblkCount);
 		sb.setMetadataBlockAvailable(mblkCount);
 		sb.setMagic(SuperBlock.SUPER_MAGIC);
+	}
+
+	private Future<MetadataBlock> insert(byte[] key,
+					     byte[] data,
+					     MetadataExtent mext)
+	{
+		ByteArrayOutputStream bos;
+		DataOutputStream dos;
+		LinkedList<MetadataBlock> mextblks;
+		MetadataBlock mblk;
+		ByteBuffer locbuf;
+		long blkaddr;
+		int allocnt;
+
+		allocnt = 0;
+
+		mextblks = mext.getMetadataBlocks();
+		for(MetadataBlock blk : mextblks)
+			if(blk.isAllocated())
+				++allocnt;
+
+		System.out.println("Allocated blocks in extent " + mext.getIndex() +
+				   ": " + allocnt);
+
+		/* We have filled the extent, need another one */		
+		if(allocnt == (METADATA_EXTENT_SIZE / METADATA_BLOCK_SIZE)) {
+			System.out.println("Filled extent: " + mext.getIndex());
+			return null;
+		}
+
+		/*
+		 * At this point we know we need to modify the extent we are
+		 * given. In order to do this, and preserve the log style of extent
+		 * allocation, we need to copy the contents into memory.
+		 *
+		 * The in memory array will be sorted, and the blocks modified
+		 * so that the new extent being written can be flushed to disk
+		 * all at once.
+		 */
+		bos = new ByteArrayOutputStream();
+		dos = new DataOutputStream(bos);
+		ImmutableList<MetadataBlock> sorted = Ordering
+			.from(MetadataBlock.getComparator())
+			.immutableSortedCopy(mextblks);
+		
+		ByteBuffer tmpbuf = ByteBuffer.allocate(METADATA_EXTENT_SIZE);
+
+		return null;
 	}
 
 	/**
@@ -166,9 +223,12 @@ class MetaStore
 	public synchronized Future<MetadataBlock> insert(byte[] key, byte[] data)
 		throws IOException
 	{
+		Future<MetadataBlock> future;
+		MetadataExtent mext;
 		MetadataBlock mblk;
 		ByteBuffer locbuf;
-		long blkidx;
+		long midx;
+		long rbidx;
 		long blkaddr;
 
 		if(isClosed() == true)
@@ -179,12 +239,12 @@ class MetaStore
 		if(data.length != HrfsDisk.LONGSZ) // Pointer size for address
 			throw new IllegalArgumentException("Invalid Block Size");
 
-		/* Check if first node */
-		System.out.println("_mext_idx: " + _mext_idx);
-		blkidx = _mext_idx;
-		mblk = getMetadataBlock(blkidx);
+		midx = _mext_idx;
+		rbidx = _root_idx;
+		mblk = getMetadataBlock(rbidx);
 
-		if(blkidx == 0) {
+		/* Check if first node */
+		if(rbidx == 0 && midx == 0) {
 			System.out.println("Inserting root mblock");
 			if(Arrays.equals(mblk.getKey(), METADATA_NULL_KEY) == false)
 				throw new IOException("Root object filled, _mextidx == 0");
@@ -196,10 +256,14 @@ class MetaStore
 			mblk.setKey(key);
 
 			/* XXX Serialized for now */
-			return ConcurrentUtils.constantFuture(mblk);
+			future = ConcurrentUtils.constantFuture(mblk);
+			return future;
 		}
 
-		return null;
+		mext = mblk.getParentExtent();
+		future = insert(key, data, mext);
+
+		return future;
 	}
 
 	/**

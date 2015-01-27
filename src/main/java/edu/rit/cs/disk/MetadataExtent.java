@@ -35,7 +35,7 @@ class MetadataExtent
 		    mblk++) {
 			MetadataBlock blk;
 
-			blk = new MetadataBlock(mbuf.duplicate(), mblk);
+			blk = new MetadataBlock(this, mblk);
 			blocks.add(blk);
 		}
 	}
@@ -73,5 +73,25 @@ class MetadataExtent
 	public LinkedList<MetadataBlock> getMetadataBlocks()
 	{
 		return this.blocks;
+	}
+
+	/**
+	 * Get the extent index.
+	 * @return idx MetadataExtent index
+	 */
+	public long getIndex()
+	{
+		return this.exn;
+	}
+
+	/**
+	 * Get a duplicate reference of the underlying byte buffer for the
+	 * extent. This does not copy the contents of the underlying buffer, and
+	 * changes to copied buffer will not be reflected in this extents buffer.
+	 * @return Copy of underlying byte buffer
+	 */
+	public ByteBuffer copyBuffer()
+	{
+		return this.mbuf.duplicate();
 	}
 }

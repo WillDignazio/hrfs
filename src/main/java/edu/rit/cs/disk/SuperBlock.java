@@ -103,19 +103,19 @@ class SuperBlock
 	}
 
 	/**
-	 * Get the MetadataBlock allocation index.
+	 * Get the MetadataExtent allocation index.
 	 * @return long Index for next extent to allocate from.
 	 */
-	public long getMetadataBlockIndex()
+	public long getMetadataExtentIndex()
 	{
 		return this.mbuf.getLong(META_INDEX_OFFSET);
 	}
 
 	/**
-	 * Set the MetadataBlock allocation index.
+	 * Set the MetadataExtent allocation index.
 	 * @param idx Index for next extent to allocate from.
 	 */
-	public void setMetadataBlockIndex(long idx)
+	public void setMetadataExtentIndex(long idx)
 	{
 		this.mbuf.putLong(META_INDEX_OFFSET, idx);
 	}
