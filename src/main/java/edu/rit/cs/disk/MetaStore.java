@@ -180,9 +180,12 @@ class MetaStore
 		allocnt = 0;
 
 		mextblks = mext.getMetadataBlocks();
-		for(MetadataBlock blk : mextblks)
-			if(blk.isAllocated())
+		for(MetadataBlock blk : mextblks) {
+			if(blk.isAllocated()) {
+				System.out.println(blk.getKey());
 				++allocnt;
+			}
+		}
 
 		System.out.println("Allocated blocks in extent " + mext.getIndex() +
 				   ": " + allocnt);
@@ -198,7 +201,7 @@ class MetaStore
 		 * given. In order to do this, and preserve the log style of extent
 		 * allocation, we need to copy the contents into memory.
 		 *
-		 * The in memory array will be sorted, and the blocks modified
+		 * the in memory array will be sorted, and the blocks modified
 		 * so that the new extent being written can be flushed to disk
 		 * all at once.
 		 */
@@ -244,7 +247,7 @@ class MetaStore
 		mblk = getMetadataBlock(rbidx);
 
 		/* Check if first node */
-		if(rbidx == 0 && midx == 0) {
+		if(rbidx == 0 && midx == 0 && !mblk.isAllocated()) {
 			System.out.println("Inserting root mblock");
 			if(Arrays.equals(mblk.getKey(), METADATA_NULL_KEY) == false)
 				throw new IOException("Root object filled, _mextidx == 0");

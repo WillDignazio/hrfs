@@ -121,8 +121,11 @@ final class MetadataBlock
 		cregion = new byte[MetaStore.METADATA_KEY_SIZE];
 
 		/* XXX Needs to be optimized */
-		for(int k=0; k < MetaStore.METADATA_KEY_SIZE; ++k)
+		for(int k=0; k < MetaStore.METADATA_KEY_SIZE; ++k) {
 			cregion[k] = getBuffer().get(offset + KEY_OFFSET + k);
+			if(cregion[k] != 0)
+				System.out.println("Nonzero on the " + k +"th value");
+		}
 
 		return cregion;
 	}

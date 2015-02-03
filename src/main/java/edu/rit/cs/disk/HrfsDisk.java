@@ -178,6 +178,7 @@ public class HrfsDisk
 			rand.nextBytes(dkey);
 
 			future = disk.insert(dkey, dbuf);
+			future = disk.insert(dkey, dbuf);
 			future.get();
 
 			disk.close();
