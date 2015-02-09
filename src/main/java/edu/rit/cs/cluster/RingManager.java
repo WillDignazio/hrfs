@@ -7,7 +7,7 @@
  * on behalf of a node.
  *
  * @author Will Dignazio <wdignazio@gmail.com>
- * @file ClusterAgent.java
+ * @file RingManager.java
  */
 package edu.rit.cs.cluster;
 
@@ -20,19 +20,22 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.lang.SerializationUtils;
-
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.ZooDefs.*;
+
+import com.google.common.base.Charsets;
+import com.google.common.hash.Hashing;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
 
 import edu.rit.cs.HrfsConfiguration;
 import edu.rit.cs.HrfsKeys;
 import edu.rit.cs.HrfsRing;
 
-public class ClusterAgent
+public class RingManager
 	extends Thread
 	implements RingListener
 {
@@ -41,14 +44,14 @@ public class ClusterAgent
 		HrfsConfiguration.init();
 	}
 
+	private static final String CURRENT_RING_LOCK = "ringlock";
 	private static final String RING_ZNODE_PATH = "/hrfs-ring";
-	private static final Log LOG = LogFactory.getLog(ClusterAgent.class);
+	private static final Log LOG = LogFactory.getLog(RingManager.class);
 
-	private InetSocketAddress rpcAddr;
+	private HashCode chash;
 	private HrfsConfiguration conf;
 	private HrfsRing ring;
-	private ClusterClient client;
-	private ClusterLock lock;
+	private ClusterLock ringlock;
 	private RingMonitor monitor;
 	private ZooKeeper zk;
 
@@ -66,89 +69,85 @@ public class ClusterAgent
 	 * the components that are active in it. This includes the shared
 	 * cluster lock, and the watcher for the cluster ring state.
 	 */
-	public ClusterAgent(ClusterClient client)
+	public RingManager()
 		throws IOException
 	{
-		this.conf = new HrfsConfiguration();
-		this.client = client;
+		HashFunction hf;
+		String suuid;		
+		File fuuid;
 
+		suuid = null;
+		hf = Hashing.sha1();
+		this.conf = new HrfsConfiguration();
+
+		/* Initialize the agent to a static hash value */
+		fuuid = new File(conf.get(HrfsKeys.HRFS_NODE_PATH, null) + "/uuid");
+		if(fuuid.exists()) {
+			BufferedReader reader;
+			reader = new BufferedReader(new FileReader(fuuid));
+			suuid = reader.readLine();
+			reader.close();
+
+		}
+
+		if(suuid == null || suuid.equals("")) {
+			BufferedWriter writer;
+			writer = new BufferedWriter(new FileWriter(fuuid));
+			suuid = UUID.randomUUID().toString();
+			LOG.info("Generated new agent UUID: " + suuid);
+			
+			writer.write(suuid);
+			writer.flush();
+			writer.close();
+		}
+
+		LOG.info("Builing uuid chash from " + suuid);
+		chash = hf.newHasher()
+			.putString(suuid, Charsets.UTF_8)
+			.hash();		
+		LOG.info("Cluster agent chash: " + chash.toString());
+		
 		/* Setup the ZooKeeper session */
 		this.zk = new ZooKeeper(
 			conf.get(HrfsKeys.HRFS_ZOOKEEPER_ADDRESS, "127.0.0.1"),
 			conf.getInt(HrfsKeys.HRFS_ZOOKEEPER_PORT, 2181),
 			new AgentWatcher());
 
-		/* For ring addition */
-		this.rpcAddr = new InetSocketAddress(client.getRPCAddress(),
-						     client.getRPCPort());
-		this.lock = new ClusterLock(zk);
-		this.monitor = new RingMonitor(zk, lock, this, RING_ZNODE_PATH);
+		/* Recogize the global cluster lock for all agents */
+		this.ringlock = new ClusterLock(zk, CURRENT_RING_LOCK);
+		this.monitor = new RingMonitor(zk, ringlock, this, RING_ZNODE_PATH);
 	}
 
 	/** Handler for ring state changes */
 	@Override
-	public synchronized void ringUpdate(HrfsRing ring)
+	public synchronized void ringUpdateHandler(HrfsRing ring)
 	{
 		byte[] buffer;
 		HrfsRing nring;
 
-		synchronized(this) {
-			this.ring = ring;
+		this.ring = ring;
 
-			try {
-				/* Just for a moment */
-				lock.lock();
-			
-				if(!this.ring.getHosts().contains(this.rpcAddr)) {
-					LOG.info("Node not present in ring, attempting to join....");
-					
-					/*
-					 * We are going to need to generate a new ring with us in
-					 * it, then publish that ring. We have the lock here, so
-					 * the cluster ring shouldn't change on us.
-					 */
-					try {
-						nring = HrfsRing.generateRing(ring, this.rpcAddr);
-						buffer = SerializationUtils.serialize(nring);
-						zk.setData(RING_ZNODE_PATH, buffer, -1);
-					}
-					catch(KeeperException e) {
-						LOG.error("Unable to join node: " +
-							  e.toString());
-					}
-					catch(InterruptedException e) {
-						LOG.error("Interrupted while joining node" +
-							  e.toString());
-					}
-				}
-
-				lock.unlock();
-			}
-			catch(IOException e) {
-				LOG.error("Failed to update ring with us in it.");
-			}
-		}
+		LOG.info("Hit Ring Update Handler");
+		/* XXX TODO Handle updates to ring */
 	}
 
 	/** Handler for ring destruction, or invalid zookeeper session */
 	@Override
-	public synchronized void closed(int rc)
+	public synchronized void closedHandler(int rc)
 	{
 		LOG.error("ZooKeeper session invalid");
 		notifyAll();
 	}
 
-	/** Handler for needing a new ring state */
-	@Override
-	public void newRing(HrfsRing ring)
+	/** 
+	 * Set the ring of the cluster.
+	 * @param ring The new ring.
+	 */
+	public void setRing(HrfsRing ring)
 	{
-		HrfsRing newring;
 		byte buffer[];
 		
 		LOG.warn("Cluster ring not initialized.");
-
-		/* Blank new ring (including us) */
-		newring = new HrfsRing();
 		
 		/*
 		 * At this point, we're the first here, and we need to
@@ -159,18 +158,16 @@ public class ClusterAgent
 		 * cluster.
 		 */
 		try {
-			lock.lock();
+			ringlock.lock();
 
-			/* Create a new HrfsRing */
-			buffer = SerializationUtils.serialize(newring);
-
+			buffer = SerializationUtils.serialize(ring);
 			zk.create(RING_ZNODE_PATH,
 				  buffer,
 				  Ids.OPEN_ACL_UNSAFE,
 				  CreateMode.PERSISTENT);
 
 			LOG.info("Created new ring state");
-			lock.unlock();
+			ringlock.unlock();
 		}
 		catch(InterruptedException e) {
 			LOG.error("Interrupted while creating ring " + e.toString());
@@ -186,5 +183,14 @@ public class ClusterAgent
 				  e.toString());
 			System.exit(1);
 		}
+	}
+
+	/**
+	 * Get the ring of the cluster.
+	 * @return ring Cluster ring
+	 */
+	public HrfsRing getRing()
+	{
+		return this.ring;
 	}
 }

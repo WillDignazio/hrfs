@@ -28,11 +28,10 @@ import org.apache.commons.logging.LogFactory;
 import edu.rit.cs.HrfsRPC;
 import edu.rit.cs.HrfsKeys;
 import edu.rit.cs.HrfsConfiguration;
-import edu.rit.cs.cluster.ClusterAgent;
-import edu.rit.cs.cluster.ClusterClient;
+import edu.rit.cs.cluster.RingManager;
 
 public class HrfsNode
-	implements HrfsRPC, ClusterClient
+	implements HrfsRPC
 {
 	static
 	{
@@ -48,12 +47,12 @@ public class HrfsNode
 	private int port;
 	private String address;
 	private RPC.Server server;
-	private ClusterAgent cagent;
+	private RingManager cagent;
 
 	/**
 	 * By default, the HRFS Node will immediately use the local hrfs
-	 * configuration to establish a listening socket. The HrfsNode uses
-	 * the Hadoop RPC API to uphold the common HrfsRPC, and should faithfully
+	 * configuration to establish a listening socket. The HrfsNode uses the
+	 * Hadoop RPC API to uphold the common HrfsRPC, and should faithfully
 	 * respond to each request.
 	 */
 	public HrfsNode()
@@ -115,30 +114,10 @@ public class HrfsNode
 		}
 
 		/* Build cluster proxy */
-		this.cagent = new ClusterAgent(this);
+		this.cagent = new RingManager();
 
 		/* Start Node Daemons */
 		this.server.start();
-	}
-
-	/**
-	 * Gets the port this hrfs node will accept rpc calls from.
-	 * @return rpc Hadoop RPC server port
-	 */
-	@Override
-	public int getRPCPort()
-	{
-		return this.port;
-	}
-
-	/**
-	 * Gets the rpc address of the server for this node.
-	 * @return address RPC address for the node.
-	 */
-	@Override
-	public String getRPCAddress()
-	{
-		return this.address;
 	}
 
 	/**

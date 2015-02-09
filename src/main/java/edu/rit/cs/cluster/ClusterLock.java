@@ -39,15 +39,16 @@ class ClusterLock
 
 	private static final Log LOG = LogFactory.getLog(ClusterLock.class);
 	private static final String LOCKBASE = "/";
-	private static final String LOCKNAME = "hrfs-lock";
 
 	private final ZooKeeper zk;
 	private String lockPath;
+	private String lid;
 
-	public ClusterLock(ZooKeeper zk)
+	public ClusterLock(ZooKeeper zk, String lid)
 	{
 		this.lockPath = null;
 		this.zk = zk;
+		this.lid = lid;
 	}
 
 	/**
@@ -60,7 +61,7 @@ class ClusterLock
 	{
 		try {
 			/* Open up a znode on a shared path */
-			lockPath = zk.create(LOCKBASE + LOCKNAME,
+			lockPath = zk.create(LOCKBASE + lid,
 					     null, /* Node Data */
 					     Ids.OPEN_ACL_UNSAFE,
 					     CreateMode.EPHEMERAL_SEQUENTIAL);

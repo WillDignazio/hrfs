@@ -23,23 +23,12 @@ public interface RingListener
 	 * state of the ring after the change.
 	 * @param ring HrfsRing after change
 	 */
-	void ringUpdate(HrfsRing ring);
+	void ringUpdateHandler(HrfsRing ring);
 
 	/**
 	 * The session that was maintained with ZooKeeper is no longer
 	 * valid, and must be gracefully closed.
 	 * @param rc Reason session is invalid
 	 */
-	void closed(int rc);
-
-	/**
-	 * We need to make a new ring, and this is the ring that was present.
-	 * This ring should be installed by the listener, and should include
-	 * the node that does the installation.
-	 * NOTE: The argument may be null, which indicates a new ring is
-	 * required.
-	 *
-	 * @param ring Previous ring state
-	 */
-	void newRing(HrfsRing ring);
+	void closedHandler(int rc);
 }

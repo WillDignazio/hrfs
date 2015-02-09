@@ -105,7 +105,7 @@ class RingMonitor
 				break;
 			case Expired:
 				dead = true;
-				listener.closed(KeeperException.Code.SessionExpired);
+				listener.closedHandler(KeeperException.Code.SessionExpired);
 				break;
 			}
 		}
@@ -149,7 +149,7 @@ class RingMonitor
 		case Code.NoAuth:
 			LOG.error("Invalid Zookeeper Session");
 			dead = true;
-			listener.closed(rc);
+			listener.closedHandler(rc);
 			return;
 		default:
 			LOG.error("Unknown return code, retrying...");
@@ -175,7 +175,7 @@ class RingMonitor
 				if(iring != this.ring ||
 				   (buffer != null && !iring.equals(this.ring))) {
 					this.ring = iring;
-					listener.ringUpdate(iring);
+					listener.ringUpdateHandler(iring);
 				}
 
 				istream.close();
@@ -195,13 +195,5 @@ class RingMonitor
 				return;
 			}
 		}
-		else {
-			/*
-			 * XXX Ring Not Initialized
-			 *
-			 * Hand off the creation to some other chump.
-			 */
-			listener.newRing(null);
-		}			
 	}
 }

@@ -10,79 +10,120 @@ package edu.rit.cs;
 import java.util.*;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
+import java.util.Collection;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.util.*;
-import org.apache.commons.lang.SerializationUtils;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.HashCode;
 
 import edu.rit.cs.HrfsKeys;
 import edu.rit.cs.HrfsConfiguration;
 
-public final class HrfsRing
+public final class HrfsRing<H extends HashCode>
 	implements Serializable
 {
-	/*
-	 * XXX Incomplete
-	 *
-	 * For now we're just going to leave this as a list of nodes
-	 * that all blocks will map to. This is obviously wrong as we
-	 * want to have a consistent hash ring that blocks will only
-	 * partially map to.
-	 */
-	private ArrayList<InetSocketAddress> hosts;
+	private final HashFunction hashFunction;
+	private final SortedMap<H, RingNode> ring;
+
 	private transient HrfsConfiguration conf;
 
 	/**
-	 * Construct a new HrfsRing without any prior knowledge of
-	 * other Hrfs Nodes, this is akin to forming a new
-	 * cluster, or new filesystem.
-	 * @param host Host address of [first] node
+	 * Node that composes the hash ring of the cluster. The node contains the
+	 * location from which the ring member can be reached,and the port that
+	 * it will respond from.
+	 * Each node has an assigned, static, hash field that will be used to
+	 * figure out where incoming hash values will go via the get() method.
 	 */
-	public HrfsRing()
+	public class RingNode
+		implements Serializable
 	{
-		conf = new HrfsConfiguration();
-		hosts = new ArrayList<InetSocketAddress>();
-		hosts.add(new InetSocketAddress(
-				  conf.get(HrfsKeys.HRFS_NODE_ADDRESS, "127.0.0.1"),
-				  conf.getInt(HrfsKeys.HRFS_NODE_PORT, 60010)));
+		private H hash;
+		private InetSocketAddress address;
+		private int port;
+
+		public RingNode(H hash, InetSocketAddress addr, int port)
+		{
+			this.hash = hash;
+			this.address = addr;
+			this.port = port;
+		}
+
+		/**
+		 * Gets the hash value assigned to this node.
+		 * @return hash Hash value for the node.
+		 */
+		public H getHash()
+		{
+			return hash;
+		}
+
+		/**
+		 * Gets the port associated with this ring member node.
+		 * @return port Port for the ring member will respond to.
+		 */
+		public int getPort()
+		{
+			return port;
+		}
+
+		/**
+		 * Gets the address associate with this ring member node.
+		 * @return address Address for this node.
+		 */
+		public InetSocketAddress getAddress()
+		{
+			return address;
+		}
 	}
 
-	/**
-	 * Constructor that creates a new ring based on a list known hosts.
-	 */
-	private HrfsRing(ArrayList<InetSocketAddress> hosts, InetSocketAddress addr)
+	public HrfsRing(HashFunction hashFunction,
+			Collection<RingNode> nodes)
 	{
-		this.hosts = hosts;
-		conf = new HrfsConfiguration();
-		this.hosts = new ArrayList<InetSocketAddress>(hosts);
-		this.hosts.add(addr);
+		this.ring = new TreeMap<H, RingNode>();
+		this.hashFunction = hashFunction;
+		this.conf = new HrfsConfiguration();
+
+		for(RingNode node : nodes)
+			add(node);
 	}
 
-	/**
-	 * Map a key to a given set of hosts, return them as a list.
-	 * @param key Hash key
-	 */
-	public ArrayList<InetSocketAddress> mapKey(String key)
+	public void add(RingNode node)
 	{
-		/* XXX Read header note */
-		return getHosts();
+		ring.put(node.getHash(), node);
 	}
 
-	public ArrayList<InetSocketAddress> getHosts()
+	public boolean contains(RingNode node)
 	{
-		/* We need to make a deep copy to preserve immutability */
-		return (ArrayList<InetSocketAddress>)SerializationUtils.
-				clone(this.hosts);
+		H hash;
+		
+		hash = node.getHash();
+		if(ring.get(hash) != null)
+			return true;
+
+		return false;
 	}
 
-	/**
-	 * Create a new immutable Ring that contains the given host.
-	 */
-	public static HrfsRing generateRing(HrfsRing ring, InetSocketAddress address)
+	public void remove(RingNode node)
 	{
-		return new HrfsRing(ring.getHosts(), address);
+		ring.remove(node.getHash());
+	}
 
+	public RingNode get(H hash)
+	{
+		if(ring.isEmpty())
+			return null;
+
+		if(!ring.containsKey(hash)) {
+			SortedMap<H, RingNode> tailMap;
+
+			/* Returns a list greater than this hash */
+			tailMap = ring.tailMap(hash);
+
+			/* Grab the first of the list */
+			hash = tailMap.isEmpty() ? ring.firstKey() : tailMap.firstKey();
+		}
+
+		return ring.get(hash);
 	}
 }
