@@ -113,8 +113,13 @@ public class HrfsNode
 			System.exit(1);
 		}
 
-		/* Build cluster proxy */
-		this.cagent = new RingManager();
+		/* Build Ring Manager */
+		this.cagent = new RingManager(
+			new InetSocketAddress(address, port));
+		
+		if(cagent.getRing() == null) {
+			LOG.info("No Ring Exists!, new filesystem?");
+		}
 
 		/* Start Node Daemons */
 		this.server.start();

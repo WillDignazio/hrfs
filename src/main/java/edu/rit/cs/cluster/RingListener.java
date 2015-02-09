@@ -13,17 +13,17 @@
  */
 package edu.rit.cs.cluster;
 
-import edu.rit.cs.HrfsRing;
+import edu.rit.cs.Ring;
 
-public interface RingListener
+interface RingListener
 {
 	/**
 	 * The state of the ring object has changed, the listener
 	 * needs to act accordingly. The given object is the
 	 * state of the ring after the change.
-	 * @param ring HrfsRing after change
+	 * @param ring Ring after change
 	 */
-	void ringUpdateHandler(HrfsRing ring);
+	void ringUpdateHandler(Ring ring);
 
 	/**
 	 * The session that was maintained with ZooKeeper is no longer

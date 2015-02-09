@@ -2,7 +2,7 @@
  * Copyright © 2014
  * Hrfs Ring Object and Utilities
  *
- * @file HrfsRing.java
+ * @file Ring.java
  * @author Will Dignazio <wdignazio@gmail.com>
  */
 package edu.rit.cs;
@@ -20,7 +20,7 @@ import com.google.common.hash.HashCode;
 import edu.rit.cs.HrfsKeys;
 import edu.rit.cs.HrfsConfiguration;
 
-public final class HrfsRing<H extends HashCode>
+public final class Ring<H extends HashCode>
 	implements Serializable
 {
 	private final HashFunction hashFunction;
@@ -40,13 +40,14 @@ public final class HrfsRing<H extends HashCode>
 	{
 		private H hash;
 		private InetSocketAddress address;
-		private int port;
 
-		public RingNode(H hash, InetSocketAddress addr, int port)
+		/* Shield in default constructor */
+		private RingNode() { }
+		
+		RingNode(H hash, InetSocketAddress addr)
 		{
 			this.hash = hash;
 			this.address = addr;
-			this.port = port;
 		}
 
 		/**
@@ -64,7 +65,7 @@ public final class HrfsRing<H extends HashCode>
 		 */
 		public int getPort()
 		{
-			return port;
+			return address.getPort();
 		}
 
 		/**
@@ -77,7 +78,15 @@ public final class HrfsRing<H extends HashCode>
 		}
 	}
 
-	public HrfsRing(HashFunction hashFunction,
+	/* Hide the default constructor */
+	public Ring(HashFunction hfn)
+	{
+		this.hashFunction = hfn;
+		this.ring = new TreeMap<H, RingNode>();
+		this.conf = new HrfsConfiguration();
+	}
+
+	public Ring(HashFunction hashFunction,
 			Collection<RingNode> nodes)
 	{
 		this.ring = new TreeMap<H, RingNode>();
@@ -88,9 +97,22 @@ public final class HrfsRing<H extends HashCode>
 			add(node);
 	}
 
-	public void add(RingNode node)
+	public RingNode createNode(H hash, InetSocketAddress addr)
 	{
-		ring.put(node.getHash(), node);
+		return new RingNode(hash, addr);
+	}
+
+	public Ring add(RingNode node)
+	{
+		Ring nring;
+		Collection<RingNode> nodes;
+
+		nodes = new LinkedList<RingNode>();
+		for(RingNode prevnode : ring.values())
+			nodes.add(prevnode);
+
+		nring = new Ring(hashFunction, nodes);
+		return nring;
 	}
 
 	public boolean contains(RingNode node)

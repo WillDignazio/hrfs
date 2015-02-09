@@ -28,7 +28,6 @@ import org.apache.zookeeper.*;
 import org.apache.zookeeper.ZooDefs.*;
 
 import edu.rit.cs.HrfsConfiguration;
-import edu.rit.cs.HrfsRing;
 
 class ClusterLock
 {

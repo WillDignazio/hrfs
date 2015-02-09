@@ -34,7 +34,7 @@ import org.apache.zookeeper.data.Stat;
 
 import edu.rit.cs.HrfsConfiguration;
 import edu.rit.cs.HrfsKeys;
-import edu.rit.cs.HrfsRing;
+import edu.rit.cs.Ring;
 
 import edu.rit.cs.cluster.ClusterLock;
 
@@ -50,7 +50,7 @@ class RingMonitor
 	
 	private ZooKeeper zk;
 	private ClusterLock lock;
-	private HrfsRing ring;
+	private Ring ring;
 	private RingListener listener;
 	private boolean dead;
 	private String ringpath;
@@ -129,13 +129,15 @@ class RingMonitor
 	@Override
 	public void processResult(int rc, String path, Object ctx, Stat stat)
 	{
-		HrfsRing iring;
+		Ring iring;
 		boolean exists;
 		byte[] buffer;
 
 		exists = false;
 		buffer = null;
 
+		LOG.info("Processing result for " + path);
+		
 		switch(rc)
 		{
 		case Code.Ok:
@@ -168,7 +170,7 @@ class RingMonitor
 
 				/* We've got our ring data, now compare it */
 				istream = new ObjectInputStream(new ByteArrayInputStream(buffer));
-				iring = (HrfsRing)istream.readObject();
+				iring = (Ring)istream.readObject();
 				LOG.info("Deserialized Cluster Ring");
 
 				/* Make sure we got our object, and it's fresh */
