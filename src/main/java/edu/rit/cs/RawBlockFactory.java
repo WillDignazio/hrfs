@@ -35,6 +35,7 @@ class RawBlockFactory
 
 	private final HrfsConfiguration conf;
 	private ConcurrentLinkedQueue<RawBlock> bqueue;
+	private ReadAheadWorker rworker;
 	private BufferedInputStream istream;
 	private File inputFile;
 	private long blockCount;
@@ -149,11 +150,10 @@ class RawBlockFactory
 					System.exit(1);
 				}
 				catch(InterruptedException e) {
-					LOG.error("Readahead worker was interrupted before " +
+					LOG.error("ReadAhead worker was interrupted before " +
 						  "completing it's task.");
 					System.exit(1);
 				}
-
 				
 			}
 		}
@@ -196,7 +196,23 @@ class RawBlockFactory
 			new FileInputStream(file));
 
 		bqueue = new ConcurrentLinkedQueue<RawBlock>();
+		rworker = new ReadAheadWorker(istream, this, rblksz);
+
+		rworker.start();
 	}
 
-	
+	/**
+	 * Produces a block of data for a client application, this block is
+	 * sequential, gauranteed to be the previous block compared to the 
+	 * next block in the queue.
+	 */
+	public Block getBlock()
+	{
+		for(;;) {
+			if(bqueue.isEmpty() == true)
+				notifyAll();
+
+			
+		}
+	}
 }
