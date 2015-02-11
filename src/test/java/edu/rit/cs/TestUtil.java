@@ -13,5 +13,5 @@ import java.io.RandomAccessFile;
 
 public final class TestUtil
 {
-
+	public static final String TEST_BASE = "target/tests/";
 }
