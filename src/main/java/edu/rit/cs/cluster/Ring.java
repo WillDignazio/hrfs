@@ -16,6 +16,7 @@ import java.util.TreeMap;
 
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.HashCode;
+import com.google.common.hash.Hashing;
 
 import edu.rit.cs.HrfsKeys;
 import edu.rit.cs.HrfsConfiguration;
@@ -23,11 +24,14 @@ import edu.rit.cs.HrfsConfiguration;
 public final class Ring<H extends HashCode>
 	implements Serializable
 {
-
+	public static final String HASH_UNSET	= "UNSET";
+	public static final String HASH_SHA1	= "SHA1";
+	
 	private final SortedMap<H, RingNode> ring;
+	private final String hashFunctionString;
        
-	private transient HashFunction hashFunction;
-	private transient HrfsConfiguration conf;
+	private transient HashFunction _hashFunction;
+	private transient HrfsConfiguration _conf;
 
 	/**
 	 * Node that composes the hash ring of the cluster. The node contains the
@@ -79,20 +83,66 @@ public final class Ring<H extends HashCode>
 		}
 	}
 
-	/* Hide the default constructor */
-	public Ring(HashFunction hfn)
+	/**
+	 * Translates a hash function from the string saved by the transient
+	 * property of the ring. This is necessary as the serialization nukes
+	 * the HashFunction for the object.
+	 */
+	private HashFunction translateFromHashString(String hstr)
 	{
-		this.hashFunction = hfn;
+		switch(hstr)
+		{
+		case HASH_UNSET:
+			return null;
+		case HASH_SHA1:
+			return Hashing.sha1();
+		default:
+			return null;
+		}
+	}
+	
+	/**
+	 * Get immutable hash function string for this Ring, this is also nifty
+	 * as we can't serialize the google HashFunction, which must be set by
+	 * the ClusterManager.
+	 */
+	public HashFunction getHashFunction()
+	{
+		/* Transient property may not be set */
+		if(_hashFunction != null)
+			return _hashFunction;		
+		else if(hashFunctionString.equals(HASH_UNSET))
+			return null;
+		else
+			return translateFromHashString(hashFunctionString);
+	}
+	
+	/**
+	 * Build the Ring with the default hash function, this will as of this
+	 * revision be the SHA1 algorithm.
+	 */
+	public Ring()
+	{
+		this.hashFunctionString = HASH_SHA1;
 		this.ring = new TreeMap<H, RingNode>();
-		this.conf = new HrfsConfiguration();
+		this._hashFunction = translateFromHashString(hashFunctionString);
+		this._conf = new HrfsConfiguration();
 	}
 
-	public Ring(HashFunction hashFunction,
-			Collection<RingNode> nodes)
+	public Ring(String hashstr)
+	{
+		this.hashFunctionString = hashstr;
+		this.ring = new TreeMap<H, RingNode>();
+		this._hashFunction = translateFromHashString(hashFunctionString);
+		this._conf = new HrfsConfiguration();
+	}
+
+	public Ring(String hashstr, Collection<RingNode> nodes)
 	{
 		this.ring = new TreeMap<H, RingNode>();
-		this.hashFunction = hashFunction;
-		this.conf = new HrfsConfiguration();
+		this.hashFunctionString = hashstr;
+		this._hashFunction = translateFromHashString(hashstr);
+		this._conf = new HrfsConfiguration();
 
 		for(RingNode node : nodes)
 			add(node);
@@ -112,7 +162,7 @@ public final class Ring<H extends HashCode>
 		for(RingNode prevnode : ring.values())
 			nodes.add(prevnode);
 
-		nring = new Ring(hashFunction, nodes);
+		nring = new Ring(hashFunctionString, nodes);
 		return nring;
 	}
 

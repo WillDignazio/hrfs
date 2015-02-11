@@ -197,13 +197,11 @@ public class RingManager
 		}
 
 		/* Create an empty ring of SHA1 */
-		ring = new Ring(Hashing.sha1());
-
 		nodes = new LinkedList<Ring.RingNode>();
 		nodes.add(manager_rnode);
 
 		/* Create the brand new ring. */
-		ring = new Ring(Hashing.sha1(), nodes);
+		ring = new Ring(Ring.HASH_SHA1, nodes);
 		setRing(ring);
 
 		ringlock.unlock();

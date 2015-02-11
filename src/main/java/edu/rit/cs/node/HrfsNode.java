@@ -62,7 +62,7 @@ public class HrfsNode
 	 * Hadoop RPC API to uphold the common HrfsRPC, and should faithfully
 	 * respond to each request.
 	 */
-	public HrfsNode()
+	public HrfsNode(Options options)
 		throws IOException
 	{
 		server = null;
@@ -233,7 +233,7 @@ public class HrfsNode
 			if(cmdline.hasOption("h"))
 				help(options, 0);
 			
-			node = new HrfsNode();
+			node = new HrfsNode(options);
 		}
 		catch(ParseException e) {
 			LOG.error("Failed to parse arguments of node: " + e.getMessage());
