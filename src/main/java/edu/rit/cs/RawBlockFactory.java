@@ -34,11 +34,11 @@ class RawBlockFactory
 	private static final Log LOG = LogFactory.getLog(RawBlockFactory.class);
 
 	private final HrfsConfiguration conf;
-	private ConcurrentLinkedQueue bqueue;
+	private ConcurrentLinkedQueue<RawBlock> bqueue;
 	private BufferedInputStream istream;
 	private File inputFile;
-	private long rblksz;
 	private long blockCount;
+	private int rblksz;
 
 	static
 	{
@@ -74,23 +74,31 @@ class RawBlockFactory
 		}
 		
 		@Override
-		public long length() { return (long)buffer.length; }
+		public long length() { return (long)_buffer.length; }
 	}
 
+	/**
+	 * XXX Needs more intelligent tracking
+	 *
+	 * When the readahead gets a signal to do work, it buffers up the next
+	 * READAHEAD_COUNT amount of blocks. This allows a client to get a
+	 * substantial performance boost, but is dependant on the client reading
+	 * all the buffered blocks before reading more.
+	 */
 	private class ReadAheadWorker
 		extends Thread
 	{
 		private Object _master;
 		private int _readahead_idx;
 		private long _blkidx;
-		private byte[] 
+		private int _blksz;
 		
 		/**
 		 * Construct a new readahead worker, pulls data from disk
 		 * a kind of jumpy fashion as the need suits the user.
 		 */
 		public ReadAheadWorker(BufferedInputStream istream,
-				       Object master, long blksz)
+				       Object master, int blksz)
 			throws IOException
 		{
 			if(istream == null || master == null)
@@ -99,6 +107,7 @@ class RawBlockFactory
 			_master = master;
 			_readahead_idx = 0;
 			_blkidx = 0;
+			_blksz = blksz;
 		}
 
 		@Override
@@ -107,31 +116,47 @@ class RawBlockFactory
 			LOG.info("Started a readahead worker.");
 			while(true)
 			{
-				if(_readahead_idx >= READAHEAD_COUNT)
-					_master.wait();
-
 				try {
-					for(int rh=0; rh < READAHEAD_COUNT: ++rh)
+					/*
+					 * If the readahead value is above the threshold,
+					 * then stop here and wait for the client to
+					 * flush what we've got. Then build some more.
+					 */
+					if(_readahead_idx >= READAHEAD_COUNT) {
+						_master.wait();
+						_readahead_idx = 0;
+					}
+					
+					for(int rh=0; rh < READAHEAD_COUNT; ++rh)
 					{
 						RawBlock rblock;
 						byte[] buffer;
 						int res;
 
 						/* Read a blocks worth of data. */
-						buffer = new buffer[blksz];
+						buffer = new byte[_blksz];
 						res = istream.read(buffer);
-						if(if res == -1)
+						if(res == -1)
 							return; // Stop here
 
 						rblock = new RawBlock(buffer, _blkidx);
+						bqueue.add(rblock);
+						++_readahead_idx;
 					}
 				}
 				catch(IOException e) {
 					LOG.error("Failed to readahead blocks from disk.");
 					System.exit(1);
 				}
+				catch(InterruptedException e) {
+					LOG.error("Readahead worker was interrupted before " +
+						  "completing it's task.");
+					System.exit(1);
+				}
+
+				
 			}
-		{
+		}
 	}
 	
 	 /**
@@ -149,7 +174,7 @@ class RawBlockFactory
 			throw new IOException("Null File Descriptor");
 
 		/* Default to 64MB size for raw blocks. */
-		rblksz = conf.getLong(HrfsKeys.HRFS_RAWBLOCK_SIZE, ((1024^3)*64));
+		rblksz = conf.getInt(HrfsKeys.HRFS_RAWBLOCK_SIZE, ((1024^3)*64));
 		if(rblksz < MIN_BLOCK_SIZE || rblksz > MAX_BLOCK_SIZE)
 			throw new IOException("Invalid Block Size" + rblksz);
 		if(rblksz % 4096 != 0 && rblksz % 512 != 0)
@@ -170,7 +195,7 @@ class RawBlockFactory
 		istream = new BufferedInputStream(
 			new FileInputStream(file));
 
-		bqueue = new ConcurrentLinkedQueue();
+		bqueue = new ConcurrentLinkedQueue<RawBlock>();
 	}
 
 	
