@@ -71,14 +71,15 @@ public class RingManager
 	 * the components that are active in it. This includes the shared
 	 * cluster lock, and the watcher for the cluster ring state.
 	 */
-	public RingManager(InetSocketAddress node_addr)
+	public RingManager(InetSocketAddress node_addr, boolean potent)
 		throws IOException
 	{
 		HashFunction hf;
-		String suuid;		
+		String suuid;
 		File fuuid;
 		Ring ring;
 
+		potent = potent;
 		suuid = null;
 		hf = Hashing.sha1();
 		this.conf = new HrfsConfiguration();
@@ -122,8 +123,13 @@ public class RingManager
 
 		/* We're going to check if the ring exists, create if not */
 		ring = getRing();
-		if(ring == null)
+		if(ring == null && potent) {
+			LOG.info("RingManager has foun no candtidate ring.");
 			ring = createRing();
+			if(!potent)
+				LOG.warn("This node is not potent, and will " +
+					 "form a new cluster ring.");
+		}
 
 		/*
 		 * Regardless, create a local node representation for the

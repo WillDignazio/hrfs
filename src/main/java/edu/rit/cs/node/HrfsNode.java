@@ -122,7 +122,8 @@ public class HrfsNode
 
 		/* Build Ring Manager */
 		this.cagent = new RingManager(
-			new InetSocketAddress(address, port));
+			new InetSocketAddress(address, port),
+			options.hasOption("potent"));
 		
 		if(cagent.getRing() == null) {
 			LOG.info("No Ring Exists!, new filesystem?");
