@@ -110,6 +110,16 @@ public class RingManager
 			.hash();		
 		LOG.info("Cluster agent chash: " + chash.toString());
 
+		/* Setup the ZooKeeper session */
+		this.zk = new ZooKeeper(
+			conf.get(HrfsKeys.HRFS_ZOOKEEPER_ADDRESS, "127.0.0.1"),
+			conf.getInt(HrfsKeys.HRFS_ZOOKEEPER_PORT, 2181),
+			new AgentWatcher());		
+		
+		/* Recogize the global cluster lock for all managers */
+		this.ringlock = new ClusterLock(zk, CURRENT_RING_LOCK);
+		this.monitor = new RingMonitor(zk, ringlock, this, RING_ZNODE_PATH);
+
 		/* We're going to check if the ring exists, create if not */
 		ring = getRing();
 		if(ring == null)
@@ -119,17 +129,7 @@ public class RingManager
 		 * Regardless, create a local node representation for the
 		 * manager of the node.
 		 */
-		this.manager_rnode = ring.createNode(chash, node_addr);
-		
-		/* Setup the ZooKeeper session */
-		this.zk = new ZooKeeper(
-			conf.get(HrfsKeys.HRFS_ZOOKEEPER_ADDRESS, "127.0.0.1"),
-			conf.getInt(HrfsKeys.HRFS_ZOOKEEPER_PORT, 2181),
-			new AgentWatcher());
-		
-		/* Recogize the global cluster lock for all managers */
-		this.ringlock = new ClusterLock(zk, CURRENT_RING_LOCK);
-		this.monitor = new RingMonitor(zk, ringlock, this, RING_ZNODE_PATH);		
+		this.manager_rnode = ring.createNode(chash, node_addr);	       		
 	}
 
 	/** Handler for ring state changes */
@@ -163,6 +163,7 @@ public class RingManager
 		byte ringbuf[];
 		
 		try {
+			LOG.info("Serializing ring for cluster...");
 			ringbuf = SerializationUtils.serialize(ring);
 			zk.create(RING_ZNODE_PATH,
 				  ringbuf,

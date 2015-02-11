@@ -12,6 +12,13 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.HelpFormatter;
+
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.*;
@@ -187,6 +194,22 @@ public class HrfsNode
 	}
 
 	/**
+	 * Helper help method, shows the available options and how to use them
+	 * for the node. This method will call System.exit() with the provided
+	 * integer exit argument.
+	 * @param options Options
+	 * @param exit Exit value for system
+	 */
+	private static void help(Options options, int exit)
+	{
+		HelpFormatter formatter;
+
+		formatter = new HelpFormatter();
+		formatter.printHelp("HrfsNode", options);
+		System.exit(0);
+	}
+	
+	/**
 	 * Starts the HrfsNode daemon, this sets up the correct
 	 * environment variables, and imports the default
 	 * configurations from the config file.
@@ -194,8 +217,26 @@ public class HrfsNode
 	public static void main(String[] args)
 		throws IOException
 	{
+		CommandLineParser parser;
+		CommandLine cmdline;
+		Options options;		
 		HrfsNode node;
 
-		node = new HrfsNode();
+
+		try {
+			parser = new BasicParser();			
+			options = new Options();
+			options.addOption("P", "potent", false, "Node is capable of creating ring.");
+			options.addOption("h", "help", false, "Show this help dialogue.");
+
+			cmdline = parser.parse(options, args);
+			if(cmdline.hasOption("h"))
+				help(options, 0);
+			
+			node = new HrfsNode();
+		}
+		catch(ParseException e) {
+			LOG.error("Failed to parse arguments of node: " + e.getMessage());
+		}
 	}
 }

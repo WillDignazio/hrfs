@@ -23,9 +23,10 @@ import edu.rit.cs.HrfsConfiguration;
 public final class Ring<H extends HashCode>
 	implements Serializable
 {
-	private final HashFunction hashFunction;
-	private final SortedMap<H, RingNode> ring;
 
+	private final SortedMap<H, RingNode> ring;
+       
+	private transient HashFunction hashFunction;
 	private transient HrfsConfiguration conf;
 
 	/**
