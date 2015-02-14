@@ -8,17 +8,23 @@
 package edu.rit.cs;
 
 import java.util.UUID;
+import java.util.Random;
 import java.security.PermissionCollection;
 import org.apache.commons.io.FileUtils;
 import java.io.IOException;
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
 import java.io.FilePermission;
 import java.io.File;
 
 class Environment
 {
+	public static final long QUOTA_MAX = 1024L*1024L*1024L*2L; // 2GB max
 	private File basedir;
 	private FilePermission defperms;
 	private PermissionCollection envperms;
+	private long uquote;
+	private long quota;
 
 	/** Need at least a base directory */
 	private Environment() { }
@@ -61,10 +67,25 @@ class Environment
 		envperms = defperms.newPermissionCollection();
 		envperms.add(defperms);
 
-		if(!envperms.implies(new FilePermission(path, "read,write")))
-			throw new SecurityException("Insufficient Environment Permissions");
+		uquote = 0;
+		quota = QUOTA_MAX;
 	}
 
+	/** Build up the environment with the desired quota */
+	public Environment setQuota(long quota)
+	{
+		this.quota = quota;
+		return this;
+	}
+
+	/** Return the quota for the environment */
+	public long getQuota()
+	{ return this.quota; }
+
+	/** Get a quote of the users quota consumption */
+	public long getQuotaUsage()
+	{ return this.uquote; }
+	
 	/**
 	 * Returns the base string of the test environment.
 	 * @return base Base path to environment.
@@ -72,26 +93,64 @@ class Environment
 	public String getBasePath()
 	{
 		if(basedir == null)
-			return null;
+			return "";
 
 		return basedir.getAbsolutePath();
 	}
-	
+
 	/**
 	 * Retrieve a new file descriptor from the base directory of the
 	 * environment. The file will by default have read and write permissions.
 	 * @return file File descriptor within environment.
 	 */
-	public File getFile()
+	public File createFile()
 		throws SecurityException, IOException
 	{
 		File file;
 		String path;
 
-		path = getBasePath() + "testfile-" + UUID.randomUUID();
+		path = getBasePath() + "/testfile-" + UUID.randomUUID();
 		file = new File(path);
-		envperms.add(new FilePermission(path, "read/write"));
+		envperms.add(new FilePermission(path, "read,write"));
 				    
+		return file;
+	}
+
+	/**
+	 * Generate a randomly filled file of the given size. The size
+	 * of this file will be deducted from the quota given to the
+	 * environment.
+	 * @param size Size of randomly filled file.
+	 */
+	public synchronized File createFile(long size)
+		throws SecurityException, IOException
+	{
+		BufferedOutputStream writer;
+		byte[] rndbuf;		
+		Random rand;
+		File file;
+		
+		/* Create base file */
+		file = createFile();
+		writer = new BufferedOutputStream(new FileOutputStream(file));
+
+		if(size > getQuota() || uquote + size > getQuota())
+			throw new IOException("Insufficient Space");
+
+		uquote += size;
+		rndbuf = new byte[4096];
+		rand = new Random();
+
+		long bidx;
+		for(bidx=0; bidx < (size-bidx); bidx+=rndbuf.length) {
+			rand.nextBytes(rndbuf);
+			writer.write(rndbuf);
+		}
+
+		for(int rdx=0; rdx < size-bidx; ++rdx)
+			writer.write((byte)rand.nextInt());
+
+		writer.flush();
 		return file;
 	}
 }

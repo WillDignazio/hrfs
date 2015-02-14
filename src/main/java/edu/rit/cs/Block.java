@@ -19,4 +19,9 @@ interface Block
 	 * @return long Size in bytes.
 	 */
 	public long length();
+
+	/**
+	 * Gets the index of the block on disk, in length size quantities.
+	 */
+	public long index();
 }

@@ -1,11 +1,12 @@
 /**
  * Copyright © 2014
- * Hrfs Raw Block Input Stream
+ * Hrfs Block Factory
  *
- * Raw blocks of data that are to be sent either over the network, or directly
- * broken up into smaller datablocks for the filesystem.
+ * Decomposes data sources into specified block sizes, each block is enumerated
+ * according to the Block interface. Each block produced will have a constant
+ * size specified at the construction of the factory.
  *
- * @file RawBlockFactory.java
+ * @file BlockFactory.java
  * @author Will Dignazio <wdignazio@gmail.com>
  */
 package edu.rit.cs;
@@ -14,7 +15,6 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -26,17 +26,18 @@ import org.apache.hadoop.util.*;
 
 import edu.rit.cs.HrfsConfiguration;
 
-class RawBlockFactory
+class BlockFactory
 {
-	public static final long MIN_BLOCK_SIZE = ((1024)^3);	// 1GB
-	public static final long MAX_BLOCK_SIZE = (1024) * 64;	// 64KB
+	public static final long MAX_BLOCK_SIZE = 1024L*1024L*1024L;// 1GB
+	public static final long MIN_BLOCK_SIZE = 1024L * 64L;	// 64KB
 	private static final int READAHEAD_COUNT = 10;
-	private static final Log LOG = LogFactory.getLog(RawBlockFactory.class);
+	private static final Log LOG = LogFactory.getLog(BlockFactory.class);
 
 	private final HrfsConfiguration conf;
 	private ConcurrentLinkedQueue<RawBlock> bqueue;
 	private ReadAheadWorker rworker;
 	private BufferedInputStream istream;
+	private boolean eof;
 	private File inputFile;
 	private long blockCount;
 	private int rblksz;
@@ -48,7 +49,7 @@ class RawBlockFactory
 
 	/**
 	 * Block implementor that is the raw production of data that has been
-	 * directly read from disk. The RawBlockFactory class will produce these
+	 * directly read from disk. The BlockFactory class will produce these
 	 * objects as Block interface adherents, and will allow anyone wishing
 	 * to use them for network or otherwise easily.
 	 */
@@ -76,6 +77,9 @@ class RawBlockFactory
 		
 		@Override
 		public long length() { return (long)_buffer.length; }
+
+		@Override
+		public long index() { return _idx; };
 	}
 
 	/**
@@ -89,26 +93,25 @@ class RawBlockFactory
 	private class ReadAheadWorker
 		extends Thread
 	{
-		private Object _master;
 		private int _readahead_idx;
 		private long _blkidx;
 		private int _blksz;
+		private Object _master;
 		
 		/**
 		 * Construct a new readahead worker, pulls data from disk
 		 * a kind of jumpy fashion as the need suits the user.
 		 */
-		public ReadAheadWorker(BufferedInputStream istream,
-				       Object master, int blksz)
+		public ReadAheadWorker(BufferedInputStream istream, Object master, int blksz)
 			throws IOException
 		{
-			if(istream == null || master == null)
+			if(istream == null)
 				throw new IOException("Invalid readahead environment");
 
-			_master = master;
 			_readahead_idx = 0;
 			_blkidx = 0;
 			_blksz = blksz;
+			_master = master;
 		}
 
 		@Override
@@ -124,7 +127,9 @@ class RawBlockFactory
 					 * flush what we've got. Then build some more.
 					 */
 					if(_readahead_idx >= READAHEAD_COUNT) {
-						_master.wait();
+						synchronized(_master) {
+							_master.wait();
+						}
 						_readahead_idx = 0;
 					}
 					
@@ -137,12 +142,16 @@ class RawBlockFactory
 						/* Read a blocks worth of data. */
 						buffer = new byte[_blksz];
 						res = istream.read(buffer);
-						if(res == -1)
+						if(res == -1) {
+							eof = true;
 							return; // Stop here
+						}
 
 						rblock = new RawBlock(buffer, _blkidx);
 						bqueue.add(rblock);
-						++_readahead_idx;
+
+						++_blkidx;
+						++_readahead_idx;						
 					}
 				}
 				catch(IOException e) {
@@ -160,23 +169,25 @@ class RawBlockFactory
 	}
 	
 	 /**
-	 * Constructs a new RawBlockFactory upon a file descriptor, this will
+	 * Constructs a new BlockFactory upon a file descriptor, this will
 	 * allow a client to buffer blocks of raw data for Hrfs.
 	 * @param file File to produce raw blocks from.
 	 */
-	public RawBlockFactory(File file)
+	public BlockFactory(File file, int blksz)
 		throws IOException
 	{
 		conf = new HrfsConfiguration();
 		inputFile = file;
+		eof = false;
 
 		if(file == null)
 			throw new IOException("Null File Descriptor");
 
 		/* Default to 64MB size for raw blocks. */
-		rblksz = conf.getInt(HrfsKeys.HRFS_RAWBLOCK_SIZE, ((1024^3)*64));
+		rblksz = blksz;
+
 		if(rblksz < MIN_BLOCK_SIZE || rblksz > MAX_BLOCK_SIZE)
-			throw new IOException("Invalid Block Size" + rblksz);
+			throw new IOException("Invalid Block Size: " + rblksz);
 		if(rblksz % 4096 != 0 && rblksz % 512 != 0)
 			throw new IOException("Block size is misaligned, " +
 					      "use multiples of 4096 or 512 bytes");
@@ -201,6 +212,10 @@ class RawBlockFactory
 		rworker.start();
 	}
 
+	/** Return whether we've reached the eof */
+	public boolean isEOF()
+	{ return eof; }
+	
 	/**
 	 * Produces a block of data for a client application, this block is
 	 * sequential, gauranteed to be the previous block compared to the 
@@ -208,11 +223,23 @@ class RawBlockFactory
 	 */
 	public Block getBlock()
 	{
-		for(;;) {
-			if(bqueue.isEmpty() == true)
-				notifyAll();
+		Block blk;
 
-			
+		for(;;) {
+			/* Wake up the readahead worker */
+			if(bqueue.isEmpty() == true)
+				synchronized(this) { this.notifyAll(); }
+
+			blk = bqueue.poll();
+			if(blk == null) {
+				if(eof)
+					return null;
+				/* if !eof, we're waiting on readahead */
+				continue;
+			}
+
+			return blk;
 		}
 	}
 }
+
