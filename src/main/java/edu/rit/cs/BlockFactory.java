@@ -36,11 +36,9 @@ class BlockFactory
 	private final HrfsConfiguration conf;
 	private ConcurrentLinkedQueue<FactoryBlock> bqueue;
 	private ReadAheadWorker rworker;
-	private BufferedInputStream istream;
 	private boolean eof;
-	private File inputFile;
 	private long blockCount;
-	private int rblksz;
+	private int blksz;
 
 	static
 	{
@@ -97,12 +95,13 @@ class BlockFactory
 		private long _blkidx;
 		private int _blksz;
 		private Object _master;
+		private InputStream _istream;
 		
 		/**
 		 * Construct a new readahead worker, pulls data from disk
 		 * a kind of jumpy fashion as the need suits the user.
 		 */
-		public ReadAheadWorker(BufferedInputStream istream, Object master, int blksz)
+		public ReadAheadWorker(InputStream istream, Object master, int blksz)
 			throws IOException
 		{
 			if(istream == null)
@@ -112,6 +111,7 @@ class BlockFactory
 			_blkidx = 0;
 			_blksz = blksz;
 			_master = master;
+			_istream = istream;
 		}
 
 		@Override
@@ -141,7 +141,7 @@ class BlockFactory
 
 						/* Read a blocks worth of data. */
 						buffer = new byte[_blksz];
-						res = istream.read(buffer);
+						res = _istream.read(buffer);
 						if(res == -1) {
 							eof = true;
 							return; // Stop here
@@ -167,30 +167,68 @@ class BlockFactory
 			}
 		}
 	}
-	
-	 /**
+
+	/**
+	 * Default constructor that instantiates the necessary data structures.
+	 */
+	private BlockFactory(int blksz)
+		throws IOException
+	{
+		conf = new HrfsConfiguration();
+		eof = false;
+		blksz = blksz;
+
+		if(blksz < MIN_BLOCK_SIZE || blksz > MAX_BLOCK_SIZE)
+			throw new IOException("Invalid Block Size: " + blksz);
+		if(blksz % 4096 != 0 && blksz % 512 != 0)
+			throw new IOException("Block size is misaligned, " +
+					      "use multiples of 4096 or 512 bytes");
+
+		bqueue = new ConcurrentLinkedQueue<FactoryBlock>();
+	}
+
+	/**
+	 * Constructs a new BlockFactory from a byte array. This will produce
+	 * blocks that are complete copies of data from the byte array, and
+	 * changes to the underlying byte array will not affect blocks produced.
+	 */
+	public BlockFactory(byte[] barr, int blksz)
+		throws IOException
+	{
+		this(blksz);
+
+		InputStream istream;
+
+		if(barr == null)
+			throw new IOException("Null byte array input");
+
+		blockCount = barr.length / blksz;
+		if((barr.length % blksz != 0) || blockCount == 0)
+		   ++blockCount;
+
+		LOG.info("Breaking byte input array into " + blockCount
+			 + " blocks");
+		istream = new ByteArrayInputStream(barr);
+		
+		rworker = new ReadAheadWorker(istream, this, blksz);
+		rworker.start();
+	}
+
+	/**
 	 * Constructs a new BlockFactory upon a file descriptor, this will
 	 * allow a client to buffer blocks of raw data for Hrfs.
 	 * @param file File to produce raw blocks from.
+	 * @param blksz Size of blocks produced
 	 */
 	public BlockFactory(File file, int blksz)
 		throws IOException
 	{
-		conf = new HrfsConfiguration();
-		inputFile = file;
-		eof = false;
+		this(blksz);
+
+		InputStream istream;
 
 		if(file == null)
 			throw new IOException("Null File Descriptor");
-
-		/* Default to 64MB size for raw blocks. */
-		rblksz = blksz;
-
-		if(rblksz < MIN_BLOCK_SIZE || rblksz > MAX_BLOCK_SIZE)
-			throw new IOException("Invalid Block Size: " + rblksz);
-		if(rblksz % 4096 != 0 && rblksz % 512 != 0)
-			throw new IOException("Block size is misaligned, " +
-					      "use multiples of 4096 or 512 bytes");
 
 		if(!file.exists())
 			throw new FileNotFoundException();
@@ -198,17 +236,15 @@ class BlockFactory
 		LOG.info("Opening new raw block producer from file "
 			 + file.getName());
 
-		blockCount = (file.length() / rblksz);
-		if(blockCount == 0)
+		blockCount = (file.length() / blksz);
+		if((file.length() % blksz) != 0 || blockCount == 0)
 			++blockCount; // At least a block count of 1.
 
 		LOG.info("Breaking raw file into " + blockCount + " blocks");
 		istream = new BufferedInputStream(
 			new FileInputStream(file));
 
-		bqueue = new ConcurrentLinkedQueue<FactoryBlock>();
-		rworker = new ReadAheadWorker(istream, this, rblksz);
-
+		rworker = new ReadAheadWorker(istream, this, blksz);
 		rworker.start();
 	}
 

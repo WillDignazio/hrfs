@@ -44,7 +44,40 @@ public class BlockFactoryTest
 	}
 
 	@Test
-	public void testBlockCount()
+	public void testByteArrayBlockCount()
+		throws IOException
+	{
+		BlockFactory factory;
+		HashMap<Long, Block> tmap;
+		int blksz;
+		Block blk;
+		byte[] barr;
+		int blks;
+
+		tmap = new HashMap<Long, Block>();
+		/* 64kb blksz */
+		blksz = 1024*64;
+
+		barr = new byte[blksz * 1024];
+		factory = new BlockFactory(barr, blksz);
+
+		blks = 0;
+		while(!factory.isEOF())
+		{
+			blk = factory.getBlock();
+			if(blk != null) {
+				++blks;
+				Assert.assertEquals(blksz, blk.length());
+				Assert.assertFalse(tmap.containsKey(blk.index()));
+				tmap.put(blk.index(), blk);
+			}
+		}
+
+		Assert.assertEquals(1024, blks);
+	}
+	
+	@Test
+	public void testFileBlockCount()
 		throws IOException
 	{
 		BlockFactory factory;
@@ -56,7 +89,6 @@ public class BlockFactoryTest
 
 		tmap = new HashMap<Long, Block>();
 		
-		/*  10 * 64MB File */
 		blksz = 1024*1024*64;
 		file = tenv.createFile(blksz * 5);
 		
@@ -64,7 +96,8 @@ public class BlockFactoryTest
 		factory = new BlockFactory(file, blksz);
 
 		blks=0;
-		while(!factory.isEOF()) {
+		while(!factory.isEOF())
+		{
 			blk = factory.getBlock();
 
 			if(blk != null) {
