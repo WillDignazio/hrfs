@@ -38,6 +38,7 @@ class BlockFactory
 	private ReadAheadWorker rworker;
 	private boolean done;
 	private long blockCount;
+	private long produced;
 	private int blksz;
 
 	static
@@ -176,6 +177,7 @@ class BlockFactory
 	{
 		conf = new HrfsConfiguration();
 		done = false;
+		produced = 0;
 		blksz = blksz;
 
 		if(blksz < MIN_BLOCK_SIZE || blksz > MAX_BLOCK_SIZE)
@@ -248,7 +250,26 @@ class BlockFactory
 		rworker.start();
 	}
 
-	/** Return whether we've reached the data input */
+	/**
+	 * Return the expected block count for the factory.
+	 * @return Number of blocks this factory will produce.
+	 */
+	public long blockCount()
+	{ return blockCount; };
+
+	/** 
+	 * Return the number of blocks that have been produced.This method is
+	 * _not_ thread safe, this derives from how users of the factory may
+	 * asynchronously request blocks to be produced.
+	 * @return Number of blocks produced from the factory.
+	 */
+	public long blocksProduced()
+	{ return produced; }
+
+	/**
+	 * Return whether we've reached the data input.
+	 * @return Whether the factory will produce any more blocks.
+	 */
 	public boolean isDone()
 	{ return done; }
 	
@@ -256,6 +277,7 @@ class BlockFactory
 	 * Produces a block of data for a client application, this block is
 	 * sequential, gauranteed to be the previous block compared to the 
 	 * next block in the queue.
+	 * @return A block of data, whose size matches the factories construction value.
 	 */
 	public Block getBlock()
 	{
@@ -274,6 +296,7 @@ class BlockFactory
 				continue;
 			}
 
+			++produced;
 			return blk;
 		}
 	}

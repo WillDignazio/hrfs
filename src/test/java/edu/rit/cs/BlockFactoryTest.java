@@ -43,6 +43,51 @@ public class BlockFactoryTest
 		}
 	}
 
+	/**
+	 * Test a file that does not have a count of blocks that matches the
+	 * block size given to the factory. The factory should produce an
+	 * number of blocks that is the number of full blocks within the file,
+	 * plus an additional one for the "short" block.
+	 */
+	@Test
+	public void testUnalignedFileCount()
+		throws IOException
+	{
+		BlockFactory factory;
+		HashMap<Long, Block> tmap;
+		int blksz;
+		Block blk;
+		File file;
+		int blks;
+
+		tmap = new HashMap<Long, Block>();
+
+		/* 64 MB blksz */
+		blksz = 1024*1024*64;
+
+		/* 4 Blocks, plus 500 bytes of random data */
+		file = tenv.createFile((blksz * 4) + 500);
+		
+		/* 64 MB Block Size */
+		factory = new BlockFactory(file, blksz);
+
+		blks=0;
+		while(!factory.isDone())
+		{
+			blk = factory.getBlock();
+
+			if(blk != null) {
+				++blks;
+
+				Assert.assertEquals(blksz, blk.length());
+				Assert.assertFalse(tmap.containsKey(blk.index()));
+				tmap.put(blk.index(), blk);
+			}
+		}
+		
+		Assert.assertEquals(5, blks);
+	}
+	
 	@Test
 	public void testByteArrayBlockCount()
 		throws IOException
@@ -111,5 +156,3 @@ public class BlockFactoryTest
 		Assert.assertEquals(5, blks);
 	}
 }
-
-
