@@ -34,7 +34,7 @@ class BlockFactory
 	private static final Log LOG = LogFactory.getLog(BlockFactory.class);
 
 	private final HrfsConfiguration conf;
-	private ConcurrentLinkedQueue<RawBlock> bqueue;
+	private ConcurrentLinkedQueue<FactoryBlock> bqueue;
 	private ReadAheadWorker rworker;
 	private BufferedInputStream istream;
 	private boolean eof;
@@ -53,7 +53,7 @@ class BlockFactory
 	 * objects as Block interface adherents, and will allow anyone wishing
 	 * to use them for network or otherwise easily.
 	 */
-	private class RawBlock
+	private class FactoryBlock
 		implements Block
 	{
 		private long _idx;
@@ -66,10 +66,10 @@ class BlockFactory
 		 * determine how fast the index iterates, and when the readahead
 		 * thread grabs more data from disk.
 		 *
-		 * @param buffer Backing buffer of the RawBlock, usually in memory
+		 * @param buffer Backing buffer of the FactoryBlock, usually in memory
 		 * @param idx Index of the block, where it lies on disk.
 		 */
-		public RawBlock(byte[] buffer, long idx)
+		public FactoryBlock(byte[] buffer, long idx)
 		{
 			_idx = idx;
 			_buffer = buffer;
@@ -135,7 +135,7 @@ class BlockFactory
 					
 					for(int rh=0; rh < READAHEAD_COUNT; ++rh)
 					{
-						RawBlock rblock;
+						FactoryBlock rblock;
 						byte[] buffer;
 						int res;
 
@@ -147,7 +147,7 @@ class BlockFactory
 							return; // Stop here
 						}
 
-						rblock = new RawBlock(buffer, _blkidx);
+						rblock = new FactoryBlock(buffer, _blkidx);
 						bqueue.add(rblock);
 
 						++_blkidx;
@@ -206,7 +206,7 @@ class BlockFactory
 		istream = new BufferedInputStream(
 			new FileInputStream(file));
 
-		bqueue = new ConcurrentLinkedQueue<RawBlock>();
+		bqueue = new ConcurrentLinkedQueue<FactoryBlock>();
 		rworker = new ReadAheadWorker(istream, this, rblksz);
 
 		rworker.start();
