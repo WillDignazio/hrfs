@@ -36,7 +36,7 @@ class BlockFactory
 	private final HrfsConfiguration conf;
 	private ConcurrentLinkedQueue<FactoryBlock> bqueue;
 	private ReadAheadWorker rworker;
-	private boolean eof;
+	private boolean done;
 	private long blockCount;
 	private int blksz;
 
@@ -143,7 +143,7 @@ class BlockFactory
 						buffer = new byte[_blksz];
 						res = _istream.read(buffer);
 						if(res == -1) {
-							eof = true;
+							done = true;
 							return; // Stop here
 						}
 
@@ -175,7 +175,7 @@ class BlockFactory
 		throws IOException
 	{
 		conf = new HrfsConfiguration();
-		eof = false;
+		done = false;
 		blksz = blksz;
 
 		if(blksz < MIN_BLOCK_SIZE || blksz > MAX_BLOCK_SIZE)
@@ -248,9 +248,9 @@ class BlockFactory
 		rworker.start();
 	}
 
-	/** Return whether we've reached the eof */
-	public boolean isEOF()
-	{ return eof; }
+	/** Return whether we've reached the data input */
+	public boolean isDone()
+	{ return done; }
 	
 	/**
 	 * Produces a block of data for a client application, this block is
@@ -268,9 +268,9 @@ class BlockFactory
 
 			blk = bqueue.poll();
 			if(blk == null) {
-				if(eof)
+				if(done)
 					return null;
-				/* if !eof, we're waiting on readahead */
+				/* if !done, we're waiting on readahead */
 				continue;
 			}
 

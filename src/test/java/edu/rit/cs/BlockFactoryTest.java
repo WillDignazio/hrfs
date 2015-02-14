@@ -62,7 +62,7 @@ public class BlockFactoryTest
 		factory = new BlockFactory(barr, blksz);
 
 		blks = 0;
-		while(!factory.isEOF())
+		while(!factory.isDone())
 		{
 			blk = factory.getBlock();
 			if(blk != null) {
@@ -96,7 +96,7 @@ public class BlockFactoryTest
 		factory = new BlockFactory(file, blksz);
 
 		blks=0;
-		while(!factory.isEOF())
+		while(!factory.isDone())
 		{
 			blk = factory.getBlock();
 
