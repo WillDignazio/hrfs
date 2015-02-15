@@ -9,8 +9,10 @@ package edu.rit.cs;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.io.FileUtils;
 import java.io.IOException;
 import java.io.File;
+import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
 import org.junit.Test;
 import org.junit.Before;
@@ -41,6 +43,47 @@ public class BlockFactoryTest
 			System.err.println("Insufficient/Invalid permissions for test environment: "
 				  + e.toString());
 		}
+	}
+
+	@Test
+	public void testFileConsistency()
+		throws IOException
+	{
+		ByteArrayOutputStream bos;
+		BlockFactory factory;
+		int blksz;
+		Block blk;
+		File file;
+		int blks;
+		byte[] bfile;
+		byte[] bfactory;
+		
+		/* 64KB file Blocks */
+		blksz = 1024*64;
+		file = tenv.createFile(blksz * 100);
+
+		bos = new ByteArrayOutputStream();
+		bfile = FileUtils.readFileToByteArray(file);
+		factory = new BlockFactory(file, blksz);
+
+		blks=0;
+		while(!factory.isDone())
+		{
+			blk = factory.getBlock();
+
+			if(blk != null) {
+				++blks;
+				/* This is OK since we're specifying a < MAX_INT blksz */
+				bos.write(blk.data(), 0, (int)blk.length());
+			}
+		}
+
+		bos.flush();
+		bfactory = bos.toByteArray();
+
+		/* Compare to length, since last block may be padded */
+		for(int bidx=0; bidx < bfile.length; ++bidx)
+			Assert.assertEquals(bfile[bidx], bfactory[bidx]);
 	}
 
 	/**

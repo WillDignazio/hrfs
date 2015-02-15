@@ -22,6 +22,15 @@ interface Block
 
 	/**
 	 * Gets the index of the block on disk, in length size quantities.
+	 * @return Index of block.
 	 */
 	public long index();
+
+	/**
+	 * Get a reference to the underlying data of this block. This will
+	 * be a direct reference, and modifications to this will change the
+	 * block data.
+	 * @return Reference to block data.
+	 */
+	public byte[] data();
 }

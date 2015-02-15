@@ -75,10 +75,16 @@ class BlockFactory
 		}
 		
 		@Override
-		public long length() { return (long)_buffer.length; }
+		public long length()
+		{ return (long)_buffer.length; }
 
 		@Override
-		public long index() { return _idx; };
+		public long index()
+		{ return _idx; };
+
+		@Override
+		public byte[] data()
+		{ return _buffer; }
 	}
 
 	/**
