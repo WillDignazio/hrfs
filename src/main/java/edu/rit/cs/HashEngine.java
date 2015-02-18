@@ -141,4 +141,24 @@ public class HashEngine
 	 */
 	public long getProducedCount()
 	{ return this.ahcnt.get(); }
+
+	/**
+	 * Submit a job to run within the HashEngine, this passes the work off
+	 * a waiting thread. If no such thread is present, the thread that was
+	 * asked to the job will yield, and the thread that requested the
+	 * insertion will complete the task.
+	 */
+	public void hashBlock(Block blk)
+	{
+		if(blk == null || blk.data() == null)
+			throw new IllegalArgumentException("Invalid block");
+
+		/* 
+		 * Safely and concurrently add the block to the biqueue object
+		 * within the engine. The biqueue uses a thread safe data structure
+		 * to back it's primary storae.
+		 */
+		biqueue.add(blk);
+		synchronized(this) { notifyAll(); }
+	}
 }
