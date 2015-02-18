@@ -25,7 +25,6 @@ public class BlockFactoryTest
 {
 	private Environment tenv;
 
-
 	@Before
 	public void initTest()
 	{

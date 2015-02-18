@@ -148,7 +148,7 @@ public class HashEngine
 	 * asked to the job will yield, and the thread that requested the
 	 * insertion will complete the task.
 	 */
-	public void hashBlock(Block blk)
+	public void putBlock(Block blk)
 	{
 		if(blk == null || blk.data() == null)
 			throw new IllegalArgumentException("Invalid block");
@@ -160,5 +160,18 @@ public class HashEngine
 		 */
 		biqueue.add(blk);
 		synchronized(this) { notifyAll(); }
+	}
+
+	/**
+	 * Poll for a data block from the engine, if no new data blocks are
+	 * available, then null is returned. 
+	 */
+	public DataBlock getDataBlock()
+	{
+		DataBlock dblk;
+
+		/** XXX Needs to be fixed */
+		dblk = boqueue.poll();
+		return dblk;
 	}
 }

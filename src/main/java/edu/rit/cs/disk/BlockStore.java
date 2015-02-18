@@ -1,5 +1,5 @@
 /**
- * Copyright © 2014
+ * Copyright © 2015
  * Hrfs Block Store API
  *
  * Defines what a block storage device for Hrfs should support. This will be
@@ -11,6 +11,9 @@
  */
 package edu.rit.cs.disk;
 
+import edu.rit.cs.DataBlock;
+import java.io.IOException;
+
 public interface BlockStore
 {
 	/**
@@ -19,5 +22,28 @@ public interface BlockStore
 	 * storage unit.
 	 * @return Whether the creation of the block store was successful.
 	 */
-	public boolean create();
+	public boolean create()
+		throws IOException;
+
+	/**
+	 * Open up an instance of a block store, this insinuiates that a block
+	 * store may not immediately be open for read or writing data.
+	 */
+	public boolean open()
+		throws IOException;
+
+	/**
+	 * Similarly determine whether the block store is open for writing.
+	 */
+	public boolean isOpen()
+		throws IOException;
+
+	/**
+	 * Implementation of insert for the BlockStore unit, this will return
+	 * whether the specified insertion was successful. The gaurantees about
+	 * whether the data is immediately retrievable are dependent on the
+	 * implementation.
+	 */
+	public boolean insert(DataBlock blk)
+		throws IOException;
 }

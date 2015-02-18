@@ -17,7 +17,7 @@ import java.io.FileOutputStream;
 import java.io.FilePermission;
 import java.io.File;
 
-class Environment
+public class Environment
 {
 	public static final long QUOTA_MAX = 1024L*1024L*1024L*2L; // 2GB max
 	private File basedir;

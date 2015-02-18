@@ -81,7 +81,7 @@ public class HashEngineTest
 			if(blk == null)
 				break;
 
-			hengine.hashBlock(blk);
+			hengine.putBlock(blk);
 		}
 	}
 }
