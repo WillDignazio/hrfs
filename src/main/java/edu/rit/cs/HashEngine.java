@@ -10,17 +10,17 @@
  * @author Will Dignazio <wdignazio@gmail.com>
  */
 package edu.rit.cs;
-
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.io.IOException;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.HashCode;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
 
 public class HashEngine
 {
@@ -30,6 +30,7 @@ public class HashEngine
 	}
 
 	private static final Log LOG = LogFactory.getLog(HashEngine.class);
+	private AtomicLong ahcnt;
 	private HrfsConfiguration conf;
 	private ThreadPoolExecutor executor;
 	private ConcurrentLinkedQueue<Block> biqueue;
@@ -59,7 +60,7 @@ public class HashEngine
 			byte[] bdata;
 			Block blk;
 			
-			if(biqueue == null || boqueue == null)
+			if(biqueue == null || boqueue == null || ahcnt == null)
 				throw new IllegalArgumentException("Unitialized Engine");
 			
 			for(;;) {
@@ -100,6 +101,8 @@ public class HashEngine
 				/* Go Go Go! */
 				dblk = new DataBlock(blk.data(), hcode.asBytes(), blk.index());
 				boqueue.add(dblk);
+				/* For now we need a hash metric */
+				ahcnt.incrementAndGet();
 			}
 		}
 	}
@@ -108,13 +111,15 @@ public class HashEngine
 	 * Construct a new hash engine, using the default configuration values
 	 * present in the the hrfs site configuration file.
 	 */
-	public HashEngine()
+	public HashEngine(HashFunction hfn)
 	{
 		this.conf = new HrfsConfiguration();
+		this.hashfn = hfn;
 		this.nworkers = conf.getInt(HrfsKeys.HRFS_HENGINE_WORKERS, 5);
 
 		this.biqueue = new ConcurrentLinkedQueue<Block>();
 		this.boqueue = new ConcurrentLinkedQueue<DataBlock>();
+		this.ahcnt = new AtomicLong(0);
 		
 		/* Build up our worker pool using the configuration tunable. */
 		this.executor = new ThreadPoolExecutor(nworkers, nworkers,
@@ -128,5 +133,12 @@ public class HashEngine
 	 */
 	public int getWorkerCount()
 	{ return this.nworkers; }
-}
 
+	/**
+	 * Get the number of DataBlocks produced by this HashEngine.
+	 * This value is atomic and is the true representation of the number of
+	 * blocks processed bye the hash engine.
+	 */
+	public long getProducedCount()
+	{ return this.ahcnt.get(); }
+}

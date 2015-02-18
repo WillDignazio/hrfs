@@ -7,6 +7,8 @@
  */
 package edu.rit.cs;
 
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import java.io.IOException;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,5 +35,19 @@ public class HashEngineTest
 			System.err.println("Insufficient/Invalid permissions for test environment: "
 				  + e.toString());
 		}
+	}
+
+	@Test
+	public void createSHA1HEngineTest()
+	{
+		HashEngine hengine;
+		HashFunction hfn;
+
+		hfn = Hashing.sha1();
+		hengine = new HashEngine(hfn);
+
+		Assert.assertFalse(hengine == null);
+		Assert.assertTrue(hengine.getWorkerCount() > 0);
+		Assert.assertTrue(hengine.getProducedCount() == 0);
 	}
 }
