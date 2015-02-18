@@ -1,3 +1,4 @@
+
 /**
  * Copyright © 2014
  * Hadoop Replicating Filesystem Keys File
@@ -16,9 +17,12 @@ public final class HrfsKeys
 	public static final String	HRFS_NODE_PATH		= "hrfs.node.path";
 	public static final String 	HRFS_NODE_PORT		= "hrfs.node.port";
 	public static final String	HRFS_NODE_STORE_PATH	= "hrfs.node.store.path";
-	
+
 	public static final String HRFS_ZOOKEEPER_ADDRESS	= "hrfs.zookeeper.address";
 	public static final String HRFS_ZOOKEEPER_PORT		= "hrfs.zookeeper.port";
+
+	/* Tunables */
+	public static final String	HRFS_HENGINE_WORKERS	= "hrfs.hengine.workers";
 
 	/* Assinged Value Constants */
 	public static final String HRFS_DEFAULT_URI_SCHEME	= "hrfs";
