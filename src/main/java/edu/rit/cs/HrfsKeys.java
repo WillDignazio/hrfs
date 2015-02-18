@@ -13,9 +13,9 @@ public final class HrfsKeys
 {
 	/* Node Configuration Keys */
 	public static final String	HRFS_NODE_ADDRESS	= "hrfs.node.address";
-	public static final String	HRFS_NODE_PATH	= "hrfs.node.path";
-	public static final String 	HRFS_NODE_PORT	= "hrfs.node.port";
-	public static final String	HRFS_RAWBLOCK_SIZE = "hrfs.rawblock.size";
+	public static final String	HRFS_NODE_PATH		= "hrfs.node.path";
+	public static final String 	HRFS_NODE_PORT		= "hrfs.node.port";
+	public static final String	HRFS_NODE_STORE_PATH	= "hrfs.node.store.path";
 	
 	public static final String HRFS_ZOOKEEPER_ADDRESS	= "hrfs.zookeeper.address";
 	public static final String HRFS_ZOOKEEPER_PORT		= "hrfs.zookeeper.port";
