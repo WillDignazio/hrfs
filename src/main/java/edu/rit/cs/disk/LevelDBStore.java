@@ -16,6 +16,11 @@ import org.iq80.leveldb.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.io.*;
 
 import edu.rit.cs.HrfsConfiguration;
@@ -32,20 +37,61 @@ class LevelDBStore
 
 	private static final Log LOG = LogFactory.getLog(LevelDBStore.class);
 
+	private ThreadPoolExecutor executor;
 	private HrfsConfiguration conf;
 	private String storePath;
 	private Options options;
-	private boolean isopen;
+	private AtomicBoolean isopen;
 	private File lvlfd;
 	private DB lvldb;
 
+	/**
+	 * Helper class that can be used to asynchronously store a block of data
+	 * given to the underlying block storage. This will not acknowledge that
+	 * acknowledge completeness currently, but give an exception for failed
+	 * writes.
+	 */
+	private class LevelDBWorker
+		extends Thread
+	{
+		DataBlock _blk;
+		
+		public LevelDBWorker(DataBlock blk)
+		{
+			_blk = blk;
+		}
+
+		/* Simpley go and insert the block */
+		@Override
+		public void run()
+		{
+			if(lvldb == null || !isopen.get()) {
+				System.err.println("Invalid LevelDB instance for worker");
+				return;
+			}
+
+			try {
+				/*
+				 * Simple as possible for now, toss the data in.
+				 * This will throw */
+				lvldb.put(_blk.hash(), _blk.data());
+				
+			}
+			catch(DBException e) {
+				System.err.println("Failed to insert block: "
+						      + e.toString());
+				return;
+			}
+		}
+	}
+	
 	/**
 	 * Construct a LevelDB Block Store instance, this will not create or open
 	 * store outright, but instead give a handle to a store as configured in
 	 * the site conf.
 	 * Use the BlockStore API to open, create, or use a block store.
 	 */
-	public LevelDBStore(String path)
+	public LevelDBStore(String path, int nworkers)
 		throws IOException
 	{
 		String nodepath;
@@ -57,12 +103,19 @@ class LevelDBStore
 		if(storePath == null)
 			throw new IOException("Store Path unset, refusing to construct store.");		
 
+		isopen = new AtomicBoolean(false);
+		
 		options = new Options();
 		options.compressionType(CompressionType.NONE);
 
 		lvlfd = new File(storePath);
 		if(lvlfd.exists() && (!lvlfd.canWrite() || !lvlfd.canRead()))
-			throw new IOException("Insufficient Permission");		
+			throw new IOException("Insufficient Permission");
+
+		/* Build up our worker pool using the configuration tunable. */
+		this.executor = new ThreadPoolExecutor(nworkers, nworkers,
+						       1000L, TimeUnit.MILLISECONDS,
+						       new LinkedBlockingQueue<Runnable>());
 	}
 
 	/**
@@ -71,7 +124,7 @@ class LevelDBStore
 	 */
 	@Override
 	public boolean isOpen()
-	{ return isopen; }		
+	{ return isopen.get(); }		
 	
 	/**
 	 * Open The block store, allowing it to be used for block storage.
@@ -85,7 +138,7 @@ class LevelDBStore
 		if(lvldb == null)
 			return false;
 
-		isopen = true;
+		isopen.set(true);
 		return true;
 	}
 	/**
@@ -104,7 +157,7 @@ class LevelDBStore
 		if(lvldb == null)
 			throw new IOException("Unable to build LevelDB store");
 
-		isopen = true;
+		isopen.set(true);
 		return true;
 	}
 
@@ -118,22 +171,12 @@ class LevelDBStore
 	public boolean insert(DataBlock blk)
 		throws IOException
 	{
-		if(!isopen)
+		if(!isopen.get())
 			throw new IOException("Database not open");
 		if(lvldb == null)
 			throw new IOException("Database not initialized");
 
-		try {
-			/*
-			 * Simple as possible for now, toss the data in.
-			 * This will throw */
-			lvldb.put(blk.hash(), blk.data());
-
-		} catch(DBException e) {
-			throw new IOException("Failed to insert block: "
-					      + e.toString());
-		}
-
+		executor.execute(new LevelDBWorker(blk));
 		return true;
 	}
 }

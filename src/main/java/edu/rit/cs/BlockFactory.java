@@ -1,5 +1,5 @@
 /**
- * Copyright © 2014
+ * Copyright © 2015
  * Hrfs Block Factory
  *
  * Decomposes data sources into specified block sizes, each block is enumerated
@@ -15,6 +15,8 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -26,7 +28,7 @@ import org.apache.hadoop.util.*;
 
 import edu.rit.cs.HrfsConfiguration;
 
-class BlockFactory
+public class BlockFactory
 {
 	public static final long MAX_BLOCK_SIZE = 1024L*1024L*1024L;// 1GB
 	public static final long MIN_BLOCK_SIZE = 1024L * 64L;	// 64KB
@@ -36,9 +38,9 @@ class BlockFactory
 	private final HrfsConfiguration conf;
 	private ConcurrentLinkedQueue<FactoryBlock> bqueue;
 	private ReadAheadWorker rworker;
-	private boolean done;
 	private long blockCount;
-	private long produced;
+	private AtomicBoolean done;	
+	private AtomicLong produced;
 	private int blksz;
 
 	static
@@ -103,6 +105,7 @@ class BlockFactory
 		private int _blksz;
 		private Object _master;
 		private InputStream _istream;
+		private Runtime _runtime;
 		
 		/**
 		 * Construct a new readahead worker, pulls data from disk
@@ -119,6 +122,10 @@ class BlockFactory
 			_blksz = blksz;
 			_master = master;
 			_istream = istream;
+			_runtime = Runtime.getRuntime();
+			System.out.println("Started Readahead worker");
+			System.out.println(" -- Aware of " + _runtime.totalMemory() + " limit");
+			System.out.println(" -- Currently sitting at " + _runtime.freeMemory());
 		}
 
 		@Override
@@ -132,12 +139,16 @@ class BlockFactory
 					 * If the readahead value is above the threshold,
 					 * then stop here and wait for the client to
 					 * flush what we've got. Then build some more.
+					 * We're also going to be aware of our memory limit, not
+					 * being too greedy with it.
 					 */
-					if(_readahead_idx >= READAHEAD_COUNT) {
+					if(_readahead_idx >= READAHEAD_COUNT ||
+					   _runtime.freeMemory() < (_blksz * 2)) {
 						synchronized(_master) {
 							_master.wait();
 						}
 						_readahead_idx = 0;
+						System.out.println("Reset readahead count");
 					}
 					
 					for(int rh=0; rh < READAHEAD_COUNT; ++rh)
@@ -150,7 +161,8 @@ class BlockFactory
 						buffer = new byte[_blksz];
 						res = _istream.read(buffer);
 						if(res == -1) {
-							done = true;
+							System.out.println("Readahead finished");
+							done.set(true);
 							return; // Stop here
 						}
 
@@ -158,8 +170,17 @@ class BlockFactory
 						bqueue.add(rblock);
 
 						++_blkidx;
-						++_readahead_idx;						
+						++_readahead_idx;
+						System.out.println("Readahead idx: " + _readahead_idx);
 					}
+				}
+				catch(OutOfMemoryError e) {
+					System.out.println("Hit memory cap, backing down...");
+					try {
+						Thread.sleep(1000);
+						synchronized(_master) { _master.wait(); }
+					}
+					catch(InterruptedException e2) { continue; }
 				}
 				catch(IOException e) {
 					LOG.error("Failed to readahead blocks from disk.");
@@ -182,8 +203,8 @@ class BlockFactory
 		throws IOException
 	{
 		conf = new HrfsConfiguration();
-		done = false;
-		produced = 0;
+		done = new AtomicBoolean(false);
+		produced = new AtomicLong(0);
 		blksz = blksz;
 
 		if(blksz < MIN_BLOCK_SIZE || blksz > MAX_BLOCK_SIZE)
@@ -270,14 +291,14 @@ class BlockFactory
 	 * @return Number of blocks produced from the factory.
 	 */
 	public long blocksProduced()
-	{ return produced; }
+	{ return produced.get(); }
 
 	/**
 	 * Return whether we've reached the data input.
 	 * @return Whether the factory will produce any more blocks.
 	 */
 	public boolean isDone()
-	{ return done; }
+	{ return done.get(); }
 	
 	/**
 	 * Produces a block of data for a client application, this block is
@@ -296,15 +317,17 @@ class BlockFactory
 
 			blk = bqueue.poll();
 			if(blk == null) {
-				if(done)
+				if(done.get()) {
+					System.out.println("Finished Block Factory");
 					return null;
+				}
+
 				/* if !done, we're waiting on readahead */
 				continue;
 			}
 
-			++produced;
+			produced.getAndIncrement();
 			return blk;
 		}
 	}
 }
-

@@ -41,14 +41,13 @@ public class HashEngine
 	private class HEWorker
 		implements Runnable
 	{
-		private Object _master;
 		private HashFunction _phashfn;
-
+		private Block _blk;
 		
-		public HEWorker(Object master, HashFunction phashfn)
+		public HEWorker(HashFunction phashfn, Block blk)
 		{
-			_master = master;
 			_phashfn = phashfn;
+			_blk = blk;
 		}
 
 		@Override
@@ -58,39 +57,13 @@ public class HashEngine
 			DataBlock dblk;
 			HashCode hcode;
 			byte[] bdata;
-			Block blk;
 			
 			if(biqueue == null || boqueue == null || ahcnt == null)
 				throw new IllegalArgumentException("Unitialized Engine");
 			
 			for(;;) {
-				/*
-				 * Wait up for the master engine instance to
-				 * provide more block data. This should be a
-				 * relatively inexpensive check compared to
-				 * producing the contant block hashing.
-				 */
-				if(biqueue.isEmpty()) {
-					try {
-						synchronized(_master) {
-							_master.wait();
-						}
-					} catch(InterruptedException e) {
-						/* XXX */
-					}
-				}
-
-				/*
-				 * We may have /just/ missed the empty check, if
-				 * that is the case, we will need to 'spin' until
-				 * another block comes up for grabs.
-				 */
-				blk = biqueue.poll();
-				if(blk == null)
-					continue;
-
-				bdata = blk.data();
-				if(blk.data() == null)
+				bdata = _blk.data();
+				if(_blk.data() == null)
 					throw new IllegalArgumentException("Invalid Block/Data");
 
 				/* Use the generic hash function to generate hash */
@@ -99,10 +72,9 @@ public class HashEngine
 					.hash();
 
 				/* Go Go Go! */
-				dblk = new DataBlock(blk.data(), hcode.asBytes(), blk.index());
+				dblk = new DataBlock(_blk.data(), hcode.asBytes(), _blk.index());
 				boqueue.add(dblk);
 				/* For now we need a hash metric */
-				ahcnt.incrementAndGet();
 			}
 		}
 	}
@@ -158,8 +130,7 @@ public class HashEngine
 		 * within the engine. The biqueue uses a thread safe data structure
 		 * to back it's primary storae.
 		 */
-		biqueue.add(blk);
-		synchronized(this) { notifyAll(); }
+		executor.execute(new HEWorker(hashfn, blk));
 	}
 
 	/**

@@ -1,4 +1,3 @@
-
 /**
  * Copyright © 2014
  * Hadoop Replicating Filesystem Keys File
@@ -23,6 +22,7 @@ public final class HrfsKeys
 
 	/* Tunables */
 	public static final String	HRFS_HENGINE_WORKERS	= "hrfs.hengine.workers";
+	public static final String	HRFS_DISK_WORKERS	= "hrfs.disk.workers";
 
 	/* Assinged Value Constants */
 	public static final String HRFS_DEFAULT_URI_SCHEME	= "hrfs";

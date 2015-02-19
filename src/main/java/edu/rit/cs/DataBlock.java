@@ -29,10 +29,9 @@ public final class DataBlock
 	}
 
 	/**
-	 * NOTE: The buffer and hval given to DataBlock will be COPIED during
-	 * runtime. This is currently one through the given Arrays.copyOf method,
-	 * but is subject to change in the future. This is to ensure immutability
-	 * of the block.
+	 * Build a new DataBlock that contains a hash value, and a data
+	 * buffer. The block for now supports an index field that indicates where
+	 * it lies in a contiguous data structure.
 	 * @param buf Backing byte buffer for the block
 	 * @param hval Hash value in byte array for the block
 	 */
@@ -44,8 +43,8 @@ public final class DataBlock
 		if(idx < 0)
 			throw new IllegalArgumentException("Block index must be >= 0");
 		
-		buffer = Arrays.copyOf(buf, buf.length);
-		hashval = Arrays.copyOf(hval, hval.length);
+		buffer = buf;
+		hashval = hval;
 		index = idx;
 	}
 
@@ -60,20 +59,19 @@ public final class DataBlock
 	{ return index; }
 
 	/** 
-	 * NOTE: Return a COPY of the underlying block buffer.
-	 * XXX: Likely to change in future commits
+	 * Return a reference to the underlying data buffer.
 	 */
 	@Override
 	public byte[] data()
 	{
-		return Arrays.copyOf(buffer, buffer.length);
+		return buffer;
 	}
 
 	/**
-	 * Return a COPY of the underlying hash value buffer.
+	 * Return a reference to the underlying hash value buffer.
 	 */
 	public byte[] hash()
 	{
-		return Arrays.copyOf(hashval, hashval.length);
+		return hashval;
 	}
 }

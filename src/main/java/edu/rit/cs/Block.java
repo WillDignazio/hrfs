@@ -11,7 +11,7 @@
  */
 package edu.rit.cs;
 
-interface Block
+public interface Block
 {
 	/**
 	 * Gets the size of the block in bytes, this is expected to be a safe
