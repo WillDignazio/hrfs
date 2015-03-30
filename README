@@ -1,0 +1,60 @@
+		    Hadoop Replicating FileSystem
+
+
+What is it?
+-----------
+
+The Hadoop Distributed Filesystem (HDFS) is a modern distributed filesystem
+implementation, built upon the Hadoop distributed architecture platform. By
+using the API and facilities within hadoop, HDFS proves to be a fault tolerant
+system that is capable of streaming data to and from constituent nodes. However,
+there is a catch: HDFS’ use of a single Nameserver for metadata and filesystem
+operation management becomes a bottleneck under the wrong workload.
+
+The Hadoop Replicating FileSystem (HRFS/hrfs) aims to solve this problem by
+distributing file data and metadata replicants to participating data nodes. In
+doing so, it hrfs increases the availability of the data, and provide higher
+throughput for more desired content. It incorporates a modular design that
+facilitates fault tolerance by removing single points of failure within the
+system as a whole.
+
+Further, hrfs aims maintain a dynamic level of replicas for file content, such
+that replicas from alternative hrfs nodes may service requests when the one node
+is under duress. With increased availability comes the need to effectively
+gather it in a large cluster, this is achieved through late binding of the
+request for file data; When a request for a file occurs, the the least loaded
+hrfs node will shall be the one to actually serve the content.
+
+The latest Version
+------------------
+
+The latest version and details can be found on GitHub,
+https://github.com/WillDignazio/hrfs/.
+
+Documentation
+-------------
+
+The documentation for Hrfs can be generated with maven, and can be invoked with:
+
+    $ mvn javadoc:javadoc
+    $ cd target/site/apidocs
+    $ python -m SimpleHTTPServer 8080
+
+This will generate the documentation for hrfs, and render it as a browsable
+source on http://localhost:8080/.
+
+Further documentation can be found in docs/, which contains various design and
+configuration information.
+
+Licensing
+---------
+
+Please see the file called LICENSE.
+
+Contacts
+--------
+
+	* For all issues and bug fix submissions, please use the GitHub
+          interface at https://github.com/WillDignazio/hrfs/.
+	* For questions, comments, and other project related requests, email
+          wdignazio(at)gmail(dot)com or mxkvcs(at)rit(dot)edu.

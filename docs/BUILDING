@@ -1,0 +1,27 @@
+			    Building Hrfs
+
+Dependencies
+------------
+
+The following software is required for building/running Hrfs:
+
+    * Java 		>= 1.7.0
+    * Hadoop Commons	>= 2.4.1
+    * Apache Maven	
+    * Google protobuf	>= 2.5.0
+
+Building
+--------
+
+From the source directory of Hrfs:
+
+     $ mvn compile -DskipTests
+     $ mvn package
+
+Testing
+-------
+
+
+From the source directory of Hrfs:
+
+     $ mvn test
