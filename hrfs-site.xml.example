@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration>
+  <property>
+    <name>hrfs.node.store.path</name>
+    <value>/n/hadoop/hrfs/leveldb.store</value>
+  </property>
+
+  <property>
+    <name>hrfs.node.address</name>
+    <value>localhost</value>
+  </property>
+
+  <property>
+    <name>hrfs.node.path</name>
+    <value>/n/hadoop/hrfs/</value>
+  </property>
+
+  <property>
+    <name>hrfs.node.port</name>
+    <value>60010</value>
+  </property>
+
+  <property>
+    <name>hrfs.blksz</name>
+    <value>65536</value>
+  </property>
+
+  <property>
+    <name>hrfs.zookeeper.address</name>
+    <value>localhost</value>
+  </property>
+
+  <property>
+    <name>hrfs.zookeeper.port</name>
+    <value>2181</value>
+  </property>
+
+  <property>
+    <name>hrfs.hengine.workers</name>
+    <value>2</value>
+  </property>
+
+  <property>
+    <name>hrfs.disk.workers</name>
+    <value>2</value>
+  </property>
+</configuration>
