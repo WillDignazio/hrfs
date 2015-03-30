@@ -1,0 +1,29 @@
+			  Hrfs Configuration
+
+Files
+-----
+
+In the root of the Hrfs source directory are:
+
+   hrfs-default.xml.example
+   hrfs-site.xml.example
+
+These are the equivalent files ones will find for Hadoop configurations outside
+of Hrfs, and must be placed in $HADOOP_HOME/etc/hadoop/. They are read by the
+Hrfs daemon at startup, and will be used for runtime parameters that determine
+system behaviour.
+
+System Parameters
+-----------------
+
+ * hrfs.node.store.path		-- Hrfs Node disk storage location, should be a full path.
+ * hrfs.node.address		-- Hrfs Node ipv4 listening address for communication
+ * hrfs.node.port		-- Hrfs Node listening port for communication
+ * hrfs.blksz			-- Hrfs Node block size
+ * hrfs.zookeeper.address 	-- Hrfs Zookeeper address
+ * hrfs.zookeeper.port		-- Hrfs Zookeeper port
+ * hrfs.hengine.workers		-- Hrfs hengine worker threads
+ * hrfs.disk.workers		-- Hrfs disk IO workers
+
+
+
